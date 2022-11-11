@@ -60,6 +60,7 @@ class posTensionedBeam:
             Pmax = Pmax1
         return Pmax
 
+    def
 
 
 
@@ -71,13 +72,19 @@ class posTensionedBeam:
                "char load": self.charac_load,
                "frec tranfer load": self.frec_transfer_load,
                "frec full load": self.frec_full_load,
-               "almost frecuent load": self.almostper_load
+               "almost frecuent load": self.almostper_load,
+               "Mi":self.Mi,
+               "Mf":self.Mf
                })
 
 
 
 if __name__ == "__main__":
 
-    viga = posTensionedBeam(.2, .15, 5, 0.03)
+    viga = posTensionedBeam(0.2, 0.15, 5, 0.028)
     viga.debug()
+    print(viga.Pmin())
+    print(viga.Pmax())
+
+
 
