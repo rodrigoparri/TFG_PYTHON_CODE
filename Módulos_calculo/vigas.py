@@ -1,3 +1,5 @@
+import math
+
 class posTensionedBeam:
 
     # concrete properties
@@ -27,6 +29,7 @@ class posTensionedBeam:
 
         self.Ab = self.h * self.b   # gross cross section
         self.Wb = self.b * self.h ** 2 / 6  # gross section modulus
+        self.I = self.b * self.h ** 3 / 12  #gross moment of inertia
         self.selfweight = self.Ab * 24
 
         if self.l >= 7:
@@ -60,7 +63,11 @@ class posTensionedBeam:
             Pmax = Pmax1
         return Pmax
 
-    def
+    def instanLoses(self, P, Ap, nu, gamma):  # nu and gamma are the frictión coefficient and involuntary curvature respectively
+        delta_Pfric = P * (1 - math.exp(-nu * self.l * (8 * self.e / self.l ** 2 + gamma)))  # Friction loses
+        delta_shortConcrete = (self.Ep / self.Ec * (P / self.Ab + P * self.e ** 2 / self.I)) * Ap  # Loses caused by concrete´s elastic shortening
+
+
 
 
 
