@@ -19,6 +19,9 @@ class posTensionedBeam:
     selfweight = 0
     partwalls = 1
     use_load = 0
+    # instatant losses
+    nu = 0.19
+    gamma = 0.0075
 
     def __init__(self, h, b, l, e,):
 
@@ -63,15 +66,15 @@ class posTensionedBeam:
             Pmax = Pmax1
         return Pmax
 
-    def instanLoses(self, P, Ap, nu, gamma):  # nu and gamma are the frictión coefficient and involuntary curvature respectively
-        delta_Pfric = P * (1 - math.exp(-nu * self.l * (8 * self.e / self.l ** 2 + gamma)))  # Friction loses
-        delta_shortConcrete = (self.Ep / self.Ec * (P / self.Ab + P * self.e ** 2 / self.I)) * Ap  # Loses caused by concrete´s elastic shortening
+    def instanLosses(self, P, Ap):  # nu and gamma are the frictión coefficient and involuntary curvature respectively
+        delta_Pfric = P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l ** 2 + self.gamma)))  # Friction losses
+        delta_shortConcrete = (self.Ep / self.Ect * (P / self.Ab + P * self.e ** 2 / self.I)) * Ap  # Losses caused by concrete´s elastic shortening
+        delta_Pjack = math.sqrt(2 * P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l ** 2 + self.gamma))) / self.l * 2 * 0.003 * self.Ep * Ap)
+        # losses in the active jack.
+        instantLosses = delta_Pfric + delta_shortConcrete + delta_Pjack
+        return instantLosses
 
 
-
-
-
-        pass
     def debug(self):
         print({"Ab": self.Ab,
                "Wb": self.Wb,
@@ -92,6 +95,7 @@ if __name__ == "__main__":
     viga.debug()
     print(viga.Pmin())
     print(viga.Pmax())
+    print(viga.instanLosses(viga.Pmin(),0.0000568))
 
 
 
