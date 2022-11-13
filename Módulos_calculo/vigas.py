@@ -64,15 +64,22 @@ class posTensionedBeam:
                "Mf":self.Mf,
                "Wmin": self.Wmin
                }
+
     def hflex(self):
         n = 0  # safety counter
-        h = (93.5 * self.frec_full_load * self.l ** 3 / self.Ec) ** 0.25
+        h = 0
         while abs(self.h - h) >= 0.05 and n < 100:
             n +=1
+            h = (93.5 * self.frec_full_load * self.l ** 3 / self.Ec) ** 0.25
             self.h = h
-            self.hflex()
-        return h
-
+        a = round(h / 0.05, 0) * 0.05
+        if a < h:
+            a = a + 0.05
+            h = a
+            return h
+        else:
+            h = a
+            return h
 
     def Pmin(self):
         # Pmin will always be determined by the intersection of lines 4 (tension under full loads) and P*e
@@ -110,6 +117,7 @@ class posTensionedBeam:
         y = (self.b / 2 * (self.h * self.b) + dp * (ns - 1) * Ap + d1 * (ns - 1)* As1 + d2 * (ns -1) + As2) / Ah
         Ih = self.b * self.h ** 3 / 12 + Ap * (n-1) * dp ** 2 + d1 ** 2 * (ns - 1)* As1 + d2 ** 2 * (ns -1) + As2
         return Ah, y, Ih
+
     def cracked(self, P, Ap, M):
         sectionHomo = self.sectionHomo(Ap, self.h - 0.06)
         sigma_infmax = -P / sectionHomo[0] - P * e * (self.h - sectionHomo[1]) / sectionHomo[2] + M * (self.h - sectionHomo[1]) / sectionHomo[2]
@@ -117,6 +125,7 @@ class posTensionedBeam:
         if sigma_infmax >= self.fctm:
             cracked = True
             # S =
+
     def timedepLosses(self, Ap):
         ho = self.Ab / (self.h + self.b)
         kh = 0
@@ -139,11 +148,17 @@ class posTensionedBeam:
 if __name__ == "__main__":
 
     viga = posTensionedBeam(0.2, 0.15, 5, 0.028)
-    print(viga.properties())
+    # print(viga.properties())
     # print(viga.Pmin())
     # print(viga.Pmax())
     # print(viga.instantLosses(viga.Pmin(),0.0000568))
     print(viga.hflex())
-
-
-
+    # h = 0.16
+    # a = round(h / 0.05, 0) * 0.05
+    # if a < h:
+    #     a = a + 0.05
+    #     h = a
+    #     print(h)
+    # else:
+    #     h = a
+    #     print(h)
