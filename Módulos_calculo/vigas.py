@@ -34,7 +34,7 @@ class posTensionedBeam:
         self. e = e
 
         self.Ab = self.h * self.b   # gross cross section
-        self.Wb = self.b * self.h ** 2 / 6  # gross section modulus
+        self.Wb = self.h ** 2 * self.b / 6  # gross section modulus
         self.I = self.b * self.h ** 3 / 12  #gross moment of inertia
         self.selfweight = self.Ab * 24
 
@@ -62,23 +62,33 @@ class posTensionedBeam:
                "almost frecuent load": self.almostper_load,
                "Mi":self.Mi,
                "Mf":self.Mf,
-               "Wmin": self.Wmin
+               "Wmin": self.Wmin,
+               "Pmin": self.Pmin(),
+                "Pmax": self.Pmax(),
+                "hflex": self.hflex(),
+
+
                }
 
     def hflex(self):
+        # finder of the minimum heigh of the beam with b = 2h/3 that has a maximum deflection of l/400
         n = 0  # safety counter
         h = 0
+        h_original = self.h
         while abs(self.h - h) >= 0.05 and n < 100:
             n +=1
             h = (93.5 * self.frec_full_load * self.l ** 3 / self.Ec) ** 0.25
             self.h = h
+
         a = round(h / 0.05, 0) * 0.05
         if a < h:
             a = a + 0.05
             h = a
+            self.h = h_original
             return h
         else:
             h = a
+            self.h = h_original
             return h
 
     def Pmin(self):
@@ -142,12 +152,23 @@ class posTensionedBeam:
         eps_ca = 2.5 * (self.fck - 10) * (10 ** -6)
         eps_cs = eps_cd + eps_ca
 
+    def Ap(self):
+        trialAp = 0.000001
+        Ap = 0
+
+        while abs(Ap - trialAp) > 0.0000001:
+            Ap = self.instantLosses(self.Pmin(), trialAp) / (0.1 * self.fpk)
+            trialAp = Ap
+        Ap_mm = Ap * 1000000
+
+        return Ap, Ap_mm
+
 
 
 
 if __name__ == "__main__":
 
-    viga = posTensionedBeam(0.2, 0.15, 5, 0.028)
+    viga = posTensionedBeam(0.4, 0.3, 10, 0.055)
     # print(viga.properties())
     # print(viga.Pmin())
     # print(viga.Pmax())
@@ -162,3 +183,6 @@ if __name__ == "__main__":
     # else:
     #     h = a
     #     print(h)
+    print(viga.properties())
+    print(viga.Pmin())
+    print(viga.Ap())
