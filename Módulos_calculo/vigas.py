@@ -11,10 +11,12 @@ class posTensionedIsoBeam:
     Ec = 34000000
     Phi = 2  # creep coeffitient
     eps_cd0 = 0.0041  # initial shrinkage strain
-    # steel properties
+    # Active steel properties
     fpk = 1860000
     fpd = 1617391
     Ep = 195000000
+    #  Passive steel properties
+    fyk = 500000
     Es = 200000000
     # load at transfer kN/m2
     construction = 1
@@ -121,12 +123,12 @@ class posTensionedIsoBeam:
             Pmax = Pmax1
         return Pmax
 
-    def equivalentLoad(self):
-        q_eqv = self.Pmin() * self.e * 8 / self.l ** 2
+    def equivalentLoad(self, P):
+        q_eqv = P * self.e * 8 / self.l ** 2
         return q_eqv
 
     def sectionHomo(self, Ap, dp, As1 = 0, d1 = 0, As2 = 0, d2 = 0):
-        # As1 and As2 are the top and bottom passive reinforcement areas
+        # As1 and As2 are the bottom and top passive reinforcement areas
         np = self.Ep / self.Ec
         ns = self.Es / self.Ec
         Ah = self.b * self.h + (np - 1) * Ap  # homogeneous cross section
@@ -160,7 +162,6 @@ class posTensionedIsoBeam:
         Ap = self.Ap()[0]
         sectionHomo = self.sectionHomo(Ap, self.h / 2 + self.e)  # Ab, y, Ib
         relaxation = 0
-
 
         if ho <= 0.2:
             kh = 1
@@ -197,11 +198,11 @@ class posTensionedIsoBeam:
         timedepLosses = numerator / denominator
         return timedepLosses
 
-    def Ap(self):
+    def Ap(self, P):
         trialAp = 1e-6  # trialAp must always be bigger than the reference value in the while loop
-        Ap = 1
+        Ap = 0
         n = 0
-        Pmin = self.Pmin()
+        Pmin = P
 
         while n < 15:  # reference value.
             Ap = self.instantLosses(Pmin, trialAp) / (0.1 * self.fpk)
@@ -209,7 +210,7 @@ class posTensionedIsoBeam:
             n += 1
 
         Ap_mm = Ap * 1e6
-        return Ap, Ap_mm
+        return Ap
 
     def checkInstDeflect(self):   # checking max isostatic deflection
         sectionHomo = self.sectionHomo(self.Ap()[0], self.h / 2 + self.e )
@@ -220,6 +221,17 @@ class posTensionedIsoBeam:
         else:
             return False, deflection   # a false value stands for an incorrect deflection
 
+    def checkELU(self, Ap, As1 = 0, As2 = 0):
+        x = (Ap * self.fpk + self.fyk * (As1 - As2) ) * 1.5 / (1.15 * 0.8 * self.b * self.fck)
+        Mp = Ap * self.fpk / 1.15 * (self.h /2 + self.e)
+        Ms1 = As1 * self.fpk / 1.15 * (self.h - .03)
+        Ms2 = As2 * self.fpk / 1.15 * 0.03
+        Mc = 0.32 * x ** 2 * self.b * self.fck / 1.5
+        M_front = Mp + Ms1 - Ms2 - Mc
+
+        if M_front < self.Mu:
+            increAs1 = (self.Mu - M_front) * 1.15 / ((self.h - 0.03)* self.fyk)
+            print(f"As1 increment needed:{increAs1}\n ")
 
 
 class reinforcedIsoBeam:
