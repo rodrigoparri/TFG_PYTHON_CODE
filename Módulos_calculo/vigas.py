@@ -3,30 +3,30 @@ import math
 class posTensionedIsoBeam:
 
     # concrete properties
-    fck = 35000
-    fckt = 24700
-    fctm = 3200
-    fctmt = 2400
-    Ect = 31300000
-    Ec = 34000000
+    fck = 35
+    fckt = 24.7
+    fctm = 3.2
+    fctmt = 2.4
+    Ect = 31300
+    Ec = 34000
     Phi = 2  # creep coeffitient
     eps_cd0 = 0.0041  # initial shrinkage strain
     # Active steel properties
-    fpk = 1860000
-    fpd = 1617391
-    Ep = 195000000
+    fpk = 1860
+    fpd = 1617.391
+    Ep = 195000
     #  Passive steel properties
-    fyk = 500000
-    Es = 200000000
-    # load at transfer kN/m2
+    fyk = 500
+    Es = 200000
+    # load at transfer N/mm2
     construction = 1
-    # full loads kN/m2
+    # full loads N/mm
     selfweight = 0
     partwalls = 1
     use_load = 0
     # instatant losses
     nu = 0.19
-    gamma = 0.0075
+    gamma = 0.75 * 1e-5
     # ducts
     ducts = {
             60:2400,
@@ -38,7 +38,7 @@ class posTensionedIsoBeam:
             130:12300,
             145:15400
             }
-    def __init__(self, h, b, l, e):
+    def __init__(self, h, b, e, l):
 
         self.h = h
         self.b = b
@@ -48,9 +48,10 @@ class posTensionedIsoBeam:
         self.Ab = self.h * self.b   # gross cross section
         self.Wb = self.h ** 2 * self.b / 6  # gross section modulus
         self.I = self.b * self.h ** 3 / 12  #gross moment of inertia
-        self.selfweight = self.Ab * 24
+        self.selfweight = self.Ab * 24 * 1e-6
 
-        if self.l >= 7:
+        # N/mm
+        if self.l >= 7000:
             self.use_load = 5
         else:
             self.use_load = 2
@@ -66,21 +67,26 @@ class posTensionedIsoBeam:
         self.Wmin = (1.1 * self.Mf - 0.9 * self.Mi) / (0.54 * self.fckt + 1.1 * self.fctm)
 
     def properties(self):
+        Pmin = self.Pmin()
+        Pmax = self.Pmax()
+        Ap = self.Ap(Pmin)
+        instantLosses = self.instantLosses(Ap, Pmin)
+
         return {"Ab": self.Ab,
-               "Wb": self.Wb,
-               "self weight": self.selfweight,
-               "char load": self.charac_load,
-               "frec tranfer load": self.frec_transfer_load,
-               "frec full load": self.frec_full_load,
-               "almost frecuent load": self.almostper_load,
-               "Mi":self.Mi,
-               "Mf":self.Mf,
-               "Wmin": self.Wmin,
-               "Pmin": self.Pmin(),
-                "Pmax": self.Pmax(),
+                "Wb": self.Wb,
                 "hflex": self.hflex(),
-
-
+                "self weight": self.selfweight,
+                "char load": self.charac_load,
+                "frec tranfer load": self.frec_transfer_load,
+                "frec full load": self.frec_full_load,
+                "almost frecuent load": self.almostper_load,
+                "Mi":self.Mi * 1e-6,
+                "Mf":self.Mf * 1e-6,
+                "Wmin": self.Wmin,
+                "Pmin": self.Pmin() * 1e-3,
+                "Pmax": self.Pmax() * 1e-3,
+                "Ap": Ap
+                "instantLosses": instantLosses,
                }
 
     def hflex(self):
@@ -88,14 +94,14 @@ class posTensionedIsoBeam:
         n = 0  # safety counter
         h = 0
         h_original = self.h
-        while abs(self.h - h) >= 0.05 and n < 100:
+        while abs(self.h - h) >= 50 and n < 100:
             n +=1
             h = (93.5 * self.frec_full_load * self.l ** 3 / self.Ec) ** 0.25
             self.h = h
 
-        a = round(h / 0.05, 0) * 0.05
+        a = round(h / 50) * 50
         if a < h:
-            a = a + 0.05
+            a = a + 50
             h = a
             self.h = h_original
             return h
@@ -147,8 +153,11 @@ class posTensionedIsoBeam:
 
     def instantLosses(self, P, Ap):  # nu and gamma are the frictión coefficient and involuntary curvature respectively
         delta_Pfric = P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l ** 2 + self.gamma)))  # Friction losses
-        delta_shortConcrete = (self.Ep / self.Ect * (P / self.Ab + P * self.e ** 2 / self.I)) * Ap  # Losses caused by concrete´s elastic shortening
-        delta_Pjack = math.sqrt(2 * P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l ** 2 + self.gamma))) / self.l * 2 * 0.003 * self.Ep * Ap)
+        delta_shortConcrete = self.Ep / self.Ect * (P / self.Ab + P * self.e ** 2 / self.I) * Ap  # Losses caused by concrete´s elastic shortening
+        alpha = 2 * P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l **2 + self.gamma))) / self.l
+        L_c = math.sqrt(2 * 3 * self.Ep * Ap / alpha)
+        # delta_Pjack = math.sqrt(2 * 3 * alpha * self.Ep * Ap)
+        delta_Pjack = alpha * L_c
         # losses in the active jack.
         instantLosses = delta_Pfric + delta_shortConcrete + delta_Pjack
         return instantLosses
@@ -159,20 +168,20 @@ class posTensionedIsoBeam:
         phi = 2
         ho = self.Ab / (self.h + self.b)
         kh = 0
-        Ap = self.Ap()[0]
+        Ap = self.Ap()
         sectionHomo = self.sectionHomo(Ap, self.h / 2 + self.e)  # Ab, y, Ib
         relaxation = 0
 
-        if ho <= 0.2:
+        if ho <= 200:
             kh = 1
-        elif .2< ho and ho <= .3:
+        elif 200 < ho and ho <= 300:
             kh = 0.85
-        elif .3< ho and ho <= .5:
+        elif 300 < ho and ho <= 500:
             kh = 0.75
-        elif ho > .5:
+        elif ho > 500:
             kh = 0.7
 
-        betha_ds = 23 / (23 * 0.04 * ((ho * 1000) ** 3) ** 0.5)
+        betha_ds = 23 / (23 * 0.04 * ((ho) ** 3) ** 0.5)
 
         eps_cd = kh * betha_ds * self.eps_cd0  # drying strain
         eps_ca = betha_ds * 2.5 * (self.fck - 10) * (10 ** -6)  # shrinkage strain
@@ -199,7 +208,7 @@ class posTensionedIsoBeam:
         return timedepLosses
 
     def Ap(self, P):
-        trialAp = 1e-6  # trialAp must always be bigger than the reference value in the while loop
+        trialAp = 10  # trialAp must always be bigger than the reference value in the while loop
         Ap = 0
         n = 0
         Pmin = P
@@ -209,12 +218,11 @@ class posTensionedIsoBeam:
             trialAp = Ap
             n += 1
 
-        Ap_mm = Ap * 1e6
         return Ap
 
-    def checkInstDeflect(self):   # checking max isostatic deflection
-        sectionHomo = self.sectionHomo(self.Ap()[0], self.h / 2 + self.e )
-        deflection = 5/384 * self.frec_full_load * self.l ** 3 / (self.Ec * sectionHomo[2])
+    def checkInstDeflect(self, Ap, EqLoad):   # checking max isostatic deflection
+        sectionHomo = self.sectionHomo(Ap, self.h / 2 + self.e )
+        deflection = 5/384 * (self.frec_full_load - EqLoad) * self.l ** 3 / (self.Ec * sectionHomo[2])
 
         if deflection < self.l / 400:
             return True, deflection      # a true value stands for a correct deflection
@@ -231,7 +239,7 @@ class posTensionedIsoBeam:
 
         if M_front < self.Mu:
             increAs1 = (self.Mu - M_front) * 1.15 / ((self.h - 0.03)* self.fyk)
-            print(f"As1 increment needed:{increAs1}\n ")
+            print(f"As1 increment needed:{increAs1}mm\n")
 
 
 class reinforcedIsoBeam:
@@ -242,9 +250,11 @@ class reinforcedIsoBeam:
 
 if __name__ == "__main__":
 
-    viga = posTensionedIsoBeam(0.4, 0.3, 10, 0.14)
-    # print(viga.checkInstDeflect())
-    print(viga.timedepLosses())
-
+    viga = posTensionedIsoBeam(400, 300, 140, 10000)
+    Pmin = viga.Pmin()
+    Ap = viga.Ap(Pmin)
+    print(Ap)
+    print(viga.instantLosses(Pmin, Ap))
+    # print(viga.properties())
 
 
