@@ -62,8 +62,8 @@ class posTensionedIsoBeam:
         self.almostper_load = self.selfweight + self.partwalls + 0.6 * self.use_load
         self.Mi = self.frec_transfer_load * self.l ** 2 / 8  # Max initial moment under loads at transfer.
         self.Mf = self.frec_full_load * self.l ** 2 / 8  # Max moment under full loads.
-        self.Me = self.almostper_load * self.l ** 2 / 8  # Max momentn under almost permanent loads
-        self.Mu = self.charac_load * self.l ** 2 / 8  # Max moment under chareacteristic load.
+        self.Me = self.almostper_load * self.l ** 2 / 8  # Max moment under almost permanent loads
+        self.Mu = self.charac_load * self.l ** 2 / 8  # Max moment under characteristic load.
         self.Wmin = (1.1 * self.Mf - 0.9 * self.Mi) / (0.54 * self.fckt + 1.1 * self.fctm)
 
     def properties(self):
@@ -71,22 +71,24 @@ class posTensionedIsoBeam:
         Pmax = self.Pmax()
         Ap = self.Ap(Pmin)
         instantLosses = self.instantLosses(Ap, Pmin)
+        timedepLosses = self.timedepLosses()
 
-        return {"Ab": self.Ab,
-                "Wb": self.Wb,
-                "hflex": self.hflex(),
-                "self weight": self.selfweight,
-                "char load": self.charac_load,
-                "frec tranfer load": self.frec_transfer_load,
-                "frec full load": self.frec_full_load,
-                "almost frecuent load": self.almostper_load,
-                "Mi":self.Mi * 1e-6,
-                "Mf":self.Mf * 1e-6,
-                "Wmin": self.Wmin,
-                "Pmin": self.Pmin() * 1e-3,
-                "Pmax": self.Pmax() * 1e-3,
-                "Ap": Ap
-                "instantLosses": instantLosses,
+        return {"Ab mm2": self.Ab,
+                "Wb cm3": self.Wb * 1e-3,
+                "hflex mm": self.hflex(),
+                "self weight kN/m": self.selfweight,
+                "char load kN/m": self.charac_load,
+                "frec tranfer load kN/m": self.frec_transfer_load,
+                "frec full load kN/m": self.frec_full_load,
+                "almost frecuent load kN/m": self.almostper_load,
+                "Mi mkN":self.Mi * 1e-6,
+                "Mf nKN":self.Mf * 1e-6,
+                "Wmin cm3": self.Wmin * 1e-3,
+                "Pmin kN": self.Pmin() * 1e-3,
+                "Pmax kN": self.Pmax() * 1e-3,
+                "Ap mm2": Ap,
+                "instantLosses kN": instantLosses * 1e-3,
+                "timedepLosses kN": timedepLosses * 1e-3
                }
 
     def hflex(self):
@@ -168,7 +170,7 @@ class posTensionedIsoBeam:
         phi = 2
         ho = self.Ab / (self.h + self.b)
         kh = 0
-        Ap = self.Ap()
+        Ap = self.Ap(Pmin)
         sectionHomo = self.sectionHomo(Ap, self.h / 2 + self.e)  # Ab, y, Ib
         relaxation = 0
 
@@ -225,7 +227,7 @@ class posTensionedIsoBeam:
         deflection = 5/384 * (self.frec_full_load - EqLoad) * self.l ** 3 / (self.Ec * sectionHomo[2])
 
         if deflection < self.l / 400:
-            return True, deflection      # a true value stands for a correct deflection
+            return True, deflection    # a true value stands for a correct deflection
         else:
             return False, deflection   # a false value stands for an incorrect deflection
 
@@ -251,10 +253,10 @@ class reinforcedIsoBeam:
 if __name__ == "__main__":
 
     viga = posTensionedIsoBeam(400, 300, 140, 10000)
-    Pmin = viga.Pmin()
-    Ap = viga.Ap(Pmin)
-    print(Ap)
-    print(viga.instantLosses(Pmin, Ap))
-    # print(viga.properties())
+    # Pmin = viga.Pmin()
+    # Ap = viga.Ap(Pmin)
+    # print(Ap)
+    # print(viga.instantLosses(Pmin, Ap))
+    print(viga.properties())
 
 

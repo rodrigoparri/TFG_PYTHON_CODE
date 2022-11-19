@@ -1,6 +1,6 @@
 from Módulos_calculo import vigas
 
-viga5 = vigas.posTensionedIsoBeam(0.2, 0.15, 5, 0.14)
+viga5 = vigas.posTensionedIsoBeam(0.2, 0.15, 0.14, 5)
 
 # global variables
 
