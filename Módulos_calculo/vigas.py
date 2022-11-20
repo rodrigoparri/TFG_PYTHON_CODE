@@ -87,8 +87,8 @@ class posTensionedIsoBeam:
         Pmin = self.Pmin()
         Pmax = self.Pmax()
         Ap = self.Ap(Pmin)
-        instantLosses = self.instantLosses(Ap, Pmin)
-        timedepLosses = self.timedepLosses()
+        instantLosses = self.instantLosses(Pmin, Ap)
+        timedepLosses = self.timedepLosses(Pmin, Ap)
 
         return {"Ab mm2": self.Ab,
                 "Wb cm3": self.Wb * 1e-3,
@@ -290,15 +290,86 @@ class posTensionedIsoBeam:
 
 class reinforcedIsoBeam:
 
-    def __init__(self):
+    fck = 35
+    fctm = 3.2
+    Ec = 34000
+    Phi = 2  # creep coeffitient
+    eps_cd0 = 0.00041  # initial shrinkage strain
+    #  Passive steel properties
+    fyk = 500
+    Es = 200000
+    # load at transfer N/mm2
+    construction = 1
+    # full loads N/mm
+    selfweight = 0
+    partwalls = 1
+    use_load = 0
+    # bars D:area
+    bars = {
+        6: 28.27,
+        8: 50.27,
+        10: 78.54,
+        12: 113.10,
+        14: 153.94,
+        16: 201.06,
+        20: 314.16,
+        25: 490.87,
+        32: 804.25,
+        40: 1256.64
+    }
+
+    def __init__(self, h, b, l):
+        self.h = h
+        self.b = b
+        self.l = l
+
+        self.rec = 30  # concrete cover
+        self.ds1 = self.h + self.rec
+
+        self.Ab = self.h * self.b  # gross cross section
+        self.Wb = self.h ** 2 * self.b / 6  # gross section modulus
+        self.Wu = self.b * (self.h - self.rec) ** 2
+        self.I = self.b * self.h ** 3 / 12  # gross moment of inertia
+        self.selfweight = self.Ab * 24 * 1e-6
+
+        if self.l >= 7000:
+            self.use_load = 5
+        else:
+            self.use_load = 2
+
+        self.charac_load = 1.35 * (self.selfweight + self.partwalls) + 1.5 * self.use_load
+        self.almostper_load = self.selfweight + self.partwalls + 0.6 * self.use_load
+        self.Me = self.almostper_load * self.l ** 2 / 8  # Max moment under almost permanent loads
+        self.Mu = self.charac_load * self.l ** 2 / 8  # Max moment under characteristic load.
+
+    def properties(self):
         pass
+
+    def Wmin(self, b = 0):  # in this context W means bd^2
+
+        Wmin = self.Mu * 1.5 / (0.8 * 0.86 * 0.35 * self.fck) #x/d is assumed to be = 0.35
+
+        if b != 0:  # checks if a "b" parameter has been introduced
+            dmin = math.sqrt(Wmin / b)
+            return Wmin, dmin
+
+        return Wmin
+
+    def As(self):
+
+        As = 1.15 * 0.8 * 0.35 * self.ds1 * self.b * self.fck / 1.5
+
+
+
 
 
 if __name__ == "__main__":
     viga = posTensionedIsoBeam(400, 300, 140, 10000)
-    Pmin = viga.Pmin()
-    Ap = viga.Ap(Pmin)
-    print(Pmin)
-    print(viga.timedepLosses(Pmin, Ap))
-    # print(viga.properties())
+    # Pmin = viga.Pmin()
+    # Ap = viga.Ap(Pmin)
+    # print(Pmin)
+    # print(viga.timedepLosses(Pmin, Ap))
+    print(viga.properties())
     # print(viga.checkELU(Ap))
+
+
