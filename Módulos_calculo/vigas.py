@@ -10,10 +10,11 @@ class posTensionedIsoBeam:
     Ect = 31300
     Ec = 34000
     Phi = 2  # creep coeffitient
-    eps_cd0 = 0.0041  # initial shrinkage strain
+    eps_cd0 = 0.00041  # initial shrinkage strain
     # Active steel properties
     fpk = 1860
-    fpd = 1617.391
+    # fpd = 1617.391
+    fbpt = 4.8
     Ep = 195000
     #  Passive steel properties
     fyk = 500
@@ -27,7 +28,7 @@ class posTensionedIsoBeam:
     # instatant losses
     nu = 0.19
     gamma = 0.75 * 1e-5
-    # ducts
+    # ducts D:area
     ducts = {
         60: 2400,
         75: 3800,
@@ -37,6 +38,19 @@ class posTensionedIsoBeam:
         120: 10400,
         130: 12300,
         145: 15400
+    }
+    # bars D:area
+    bars = {
+        6:28.27,
+        8:50.27,
+        10:78.54,
+        12:113.10,
+        14:153.94,
+        16:201.06,
+        20:314.16,
+        25:490.87,
+        32:804.25,
+        40:1256.64
     }
 
     def __init__(self, h, b, e, l):
@@ -115,12 +129,12 @@ class posTensionedIsoBeam:
             self.h = h_original
             return h
 
-    def Pmin(self):
+    def Pmin(self): # Magnel diagram
         # Pmin will always be determined by the intersection of lines 4 (tension under full loads) and P*e
         Pmin = (-self.fctm * self.Wb / 0.9 + self.Mf / 0.9) * (1 / (self.e + self.h / 6))
         return Pmin
 
-    def Pmax(self):
+    def Pmax(self): # Magnel diagram
         Pmax = 0
         # Pmax will be the minimun between the intersection of both lines 1 and 2 with P*e
         Pmax1 = (self.fctmt * self.Wb / 1.1 + self.Mi / 1.1) * (1 / (self.e - self.h / 6))
@@ -138,21 +152,24 @@ class posTensionedIsoBeam:
         q_eqv = P * self.e * 8 / self.l ** 2
         return q_eqv
 
-    def sectionHomo(self, Ap, dp, As1=0, d1=0, As2=0, d2=0):
+    def sectionHomo(self, Ap, As1=0, d1=0, As2=0, d2=0):
         # As1 and As2 are the bottom and top passive reinforcement areas
         np = self.Ep / self.Ec
         ns = self.Es / self.Ec
         Ah = self.b * self.h + (np - 1) * Ap  # homogeneous cross section
         # position of the centroid from top fibre
-        y = (self.h / 2 * (self.h * self.b) + dp * (ns - 1) * Ap + d1 * (ns - 1) * As1 + d2 * (ns - 1) + As2) / Ah
-        Ih = self.b * self.h ** 3 / 12 + Ap * (np - 1) * dp ** 2 + d1 ** 2 * (ns - 1) * As1 + d2 ** 2 * (ns - 1) * As2
+        y = (self.h / 2 * (self.h * self.b) + self.dp * (ns - 1) * Ap + d1 * (ns - 1) * As1 + d2 * (ns - 1) + As2) / Ah
+        Ih = self.b * self.h ** 3 / 12 + Ap * (np - 1) * self.dp ** 2 + d1 ** 2 * (ns - 1) * As1 + d2 ** 2 * (ns - 1) * As2
         return Ah, y, Ih
 
-    def cracked(self, P, Ap, M):
-        sectionHomo = self.sectionHomo(Ap, self.h - 0.06)
-        sigma_infmax = -P / sectionHomo[0] - P * e * (self.h - sectionHomo[1]) / sectionHomo[2] + M * (
-                    self.h - sectionHomo[1]) / sectionHomo[2]
+    def cracked(self, P, Ap, D): #D=diameter. is convenient to use P after all losses have been applied.
+        tau_bm = 7.84 - .12 * D
+
         cracked = False  # check if max tensile tension is bigger than concrete´s tensile strenght
+        sectionHomo = self.sectionHomo(Ap, self.h - 0.06)
+        ytension = self.h - sectionHomo[1]  # distance between section´s centroid and lower side
+        sigma_infmax = -P / sectionHomo[0] - P * e * ytension / sectionHomo[2] + self.Mf * y / sectionHomo[2]
+
         if sigma_infmax >= self.fctm:
             cracked = True
             # S =
@@ -169,13 +186,12 @@ class posTensionedIsoBeam:
         instantLosses = delta_Pfric + delta_shortConcrete + delta_Pjack
         return instantLosses
 
-    def timedepLosses(self):
-        Pmin = self.Pmin()
+    def timedepLosses(self, P, Ap):
+
         M = self.Me
         phi = 2
         ho = self.Ab / (self.h + self.b)
         kh = 0
-        Ap = self.Ap(Pmin)
         sectionHomo = self.sectionHomo(Ap, self.h / 2 + self.e)  # Ab, y, Ib
         relaxation = 0
 
@@ -190,13 +206,15 @@ class posTensionedIsoBeam:
 
         betha_ds = 23 / (23 * 0.04 * ((ho) ** 3) ** 0.5)
 
-        eps_cd = kh * betha_ds * self.eps_cd0  # drying strain
-        eps_ca = betha_ds * 2.5 * (self.fck - 10) * (10 ** -6)  # shrinkage strain
+        # eps_cd = kh * betha_ds * self.eps_cd0  # drying strain
+        eps_cd = kh * self.eps_cd0
+        #eps_ca = betha_ds * 2.5 * (self.fck - 10) * (10 ** -6)  # shrinkage strain
+        eps_ca = 2.5 * (self.fck - 10) * (10 ** -6)
         eps_cs = eps_cd + eps_ca  # total shrinkage strain
 
         # calculate stress with Ep*epsp calculate eps with the gross cross section and multiply by 2,9 to account for relaxation
         initial_tension = self.Ep / self.Ec * (
-                    - Pmin / sectionHomo[0] - (Pmin * self.e ** 2 + M * self.e) / sectionHomo[2])
+                    - P / sectionHomo[0] - (P * self.e ** 2 + M * self.e) / sectionHomo[2])
         initial_tension = abs(initial_tension)
 
         if initial_tension >= .6 * self.fpk:
@@ -209,7 +227,7 @@ class posTensionedIsoBeam:
         sigma_pr = initial_tension * (1 - 3 * relaxation)
         sigma_cQp = initial_tension / self.Ep
 
-        numerator = Ap * eps_cs * self.Ep + .8 * (initial_tension - sigma_pr) + self.Ep / self.Ec * phi * sigma_cQp
+        numerator = Ap * eps_cs * self.Ep + .8 * abs(initial_tension - sigma_pr) + self.Ep / self.Ec * phi * sigma_cQp
         denominator = 1 + self.Ep * Ap / (self.Ec * self.Ab) * (1 + self.Ab / self.I * sectionHomo[1] ** 2) * (
                     1 + .8 * phi)
 
@@ -280,7 +298,7 @@ if __name__ == "__main__":
     viga = posTensionedIsoBeam(400, 300, 140, 10000)
     Pmin = viga.Pmin()
     Ap = viga.Ap(Pmin)
-    print(Ap)
-    # print(viga.instantLosses(Pmin, Ap))
+    print(Pmin)
+    print(viga.timedepLosses(Pmin, Ap))
     # print(viga.properties())
-    print(viga.checkELU(Ap))
+    # print(viga.checkELU(Ap))
