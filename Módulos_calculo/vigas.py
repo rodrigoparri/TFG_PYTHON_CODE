@@ -115,24 +115,25 @@ class posTensionedIsoBeam:
 
     def hflex(self):
         # finder of the minimum heigh of the beam with b = 2h/3 that has a maximum deflection of l/400
-        n = 0  # safety counter
-        h = 0
-        h_original = self.h
-        while abs(self.h - h) >= 50 and n < 100:
-            n += 1
-            h = (93.5 * self.frec_full_load * self.l ** 3 / self.Ec) ** 0.25
-            self.h = h
+        h = pow(93.75 * self.frec_full_load * self.l ** 3 / self.Ec, 0.25)
+        a = int(h / 50) * 50
 
-        a = round(h / 50) * 50
         if a < h:
             a = a + 50
             h = a
-            self.h = h_original
-            return h
         else:
             h = a
-            self.h = h_original
-            return h
+
+        b = int(h * 2 / (3 * 50)) * 50
+
+        if b < h * 2 / 3:
+            b = b + 50
+
+        return h, b
+
+    def Iflex(self):
+        I = 5 * 400 * self.frec_full_load * pow(self.l, 3) / (384 * self.Ec)
+        return I
 
     def Pmin(self): # Magnel diagram
         # Pmin will always be determined by the intersection of lines 4 (tension under full loads) and P*e
@@ -369,15 +370,8 @@ class reinforcedIsoBeam:
 
 
 if __name__ == "__main__":
-    viga = posTensionedIsoBeam(400, 300, 140, 10000)
-    # Pmin = viga.Pmin()
-    # Ap = viga.Ap(Pmin)
-    # print(Pmin)
-    # print(viga.timedepLosses(Pmin, Ap))
-    # print(viga.properties())
-    # print(viga.checkELU(Ap))
-    # data = (400, 300, 140, 10000)
-    # viga2 = posTensionedIsoBeam(data)
-    # print(viga.properties())
+    viga = posTensionedIsoBeam(600, 550, 317.5, 20000)
+    print(viga.hflex())
+    print(viga.Iflex())
 
 
