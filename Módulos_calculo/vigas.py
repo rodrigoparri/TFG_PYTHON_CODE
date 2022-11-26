@@ -84,6 +84,10 @@ class posTensionedIsoBeam:
         self.Mu = self.charac_load * self.l ** 2 / 8  # Max moment under characteristic load.
         self.Wmin = (1.1 * self.Mf - 0.9 * self.Mi) / (0.54 * self.fckt + 1.1 * self.fctm)
 
+    def __str__(self):
+        text = f"IsoVp{self.l/1000}"
+        return text
+
     def properties(self):
         Pmin = self.Pmin()
         Pmax = self.Pmax()
