@@ -25,6 +25,7 @@ class posTensionedIsoBeam:
     selfweight = 0
     partwalls = 1
     use_load = 0
+    flooring = 1.5
     # instatant losses
     nu = 0.19
     gamma = 0.75 * 1e-5
@@ -60,7 +61,7 @@ class posTensionedIsoBeam:
         self.l = l
         self.e = e
         self.dp = self.h / 2 + self.e
-        self.rec = 30  # concrete cover
+        self.rec = 40  # concrete cover
 
         self.Ab = self.h * self.b  # gross cross section
         self.Wb = self.h ** 2 * self.b / 6  # gross section modulus
@@ -73,10 +74,10 @@ class posTensionedIsoBeam:
         else:
             self.use_load = 2
 
-        self.charac_load = 1.35 * (self.selfweight + self.partwalls) + 1.5 * self.use_load
-        self.frec_transfer_load = self.selfweight + self.construction * 0.7
-        self.frec_full_load = self.selfweight + self.partwalls + 0.7 * self.use_load
-        self.almostper_load = self.selfweight + self.partwalls + 0.6 * self.use_load
+        self.charac_load = 1.35 * (self.selfweight + self.partwalls + self.flooring) + 1.5 * self.use_load
+        self.frec_transfer_load = self.selfweight + + self.flooring + self.construction * 0.7
+        self.frec_full_load = self.selfweight + self.flooring + self.partwalls + 0.7 * self.use_load
+        self.almostper_load = self.selfweight + self.flooring + self.partwalls + 0.6 * self.use_load
         self.Mi = self.frec_transfer_load * self.l ** 2 / 8  # Max initial moment under loads at transfer.
         self.Mf = self.frec_full_load * self.l ** 2 / 8  # Max moment under full loads.
         self.Me = self.almostper_load * self.l ** 2 / 8  # Max moment under almost permanent loads
@@ -364,12 +365,15 @@ class reinforcedIsoBeam:
 
 
 if __name__ == "__main__":
-    viga = posTensionedIsoBeam(400, 300, 140, 10000)
+    # viga = posTensionedIsoBeam(400, 300, 140, 10000)
     # Pmin = viga.Pmin()
     # Ap = viga.Ap(Pmin)
     # print(Pmin)
     # print(viga.timedepLosses(Pmin, Ap))
-    print(viga.properties())
+    # print(viga.properties())
     # print(viga.checkELU(Ap))
+    data = (400, 300, 140, 10000)
+    viga2 = posTensionedIsoBeam(data)
+    print(viga.properties())
 
 
