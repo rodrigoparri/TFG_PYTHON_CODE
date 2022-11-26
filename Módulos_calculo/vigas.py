@@ -85,10 +85,10 @@ class posTensionedIsoBeam:
         self.Wmin = (1.1 * self.Mf - 0.9 * self.Mi) / (0.54 * self.fckt + 1.1 * self.fctm)
 
     def __str__(self):
-        text = f"IsoVp{self.l/1000}"
+        text = f"IsoVp{int(self.l/1000)}"
         return text
 
-    def properties(self):
+    def __repr__(self) -> dict:
         Pmin = self.Pmin()
         Pmax = self.Pmax()
         Ap = self.Ap(Pmin)
@@ -369,15 +369,15 @@ class reinforcedIsoBeam:
 
 
 if __name__ == "__main__":
-    # viga = posTensionedIsoBeam(400, 300, 140, 10000)
+    viga = posTensionedIsoBeam(400, 300, 140, 10000)
     # Pmin = viga.Pmin()
     # Ap = viga.Ap(Pmin)
     # print(Pmin)
     # print(viga.timedepLosses(Pmin, Ap))
     # print(viga.properties())
     # print(viga.checkELU(Ap))
-    data = (400, 300, 140, 10000)
-    viga2 = posTensionedIsoBeam(data)
-    print(viga.properties())
+    # data = (400, 300, 140, 10000)
+    # viga2 = posTensionedIsoBeam(data)
+    # print(viga.properties())
 
 
