@@ -11,6 +11,7 @@ class posTensionedIsoBeam:
     Ec = 34000
     Phi = 2  # creep coeffitient
     eps_cd0 = 0.00041  # initial shrinkage strain
+    rec = 40  # concrete cover
     # Active steel properties
     fpk = 1860
     # fpd = 1617.391
@@ -54,14 +55,23 @@ class posTensionedIsoBeam:
         40:1256.64
     }
 
-    def __init__(self, h, b, e, l):
+    def __init__(self, l):
 
-        self.h = h
-        self.b = b
         self.l = l
-        self.e = e
+        height = int(l / 1250) * 50
+        if height < l / 25:
+            self.h = height + 50
+        else:
+            self.h = height
+
+        width = int(self.h * 2 / 150) * 50
+        if width < (self.h * 2 / 3):
+            self.b = width + 50
+        else:
+            self.b = width
+
+        self.e = self.h / 2 - (self.rec + list(self.ducts.keys())[0] / 2)
         self.dp = self.h / 2 + self.e
-        self.rec = 40  # concrete cover
 
         self.Ab = self.h * self.b  # gross cross section
         self.Wb = self.h ** 2 * self.b / 6  # gross section modulus
@@ -84,19 +94,31 @@ class posTensionedIsoBeam:
         self.Mu = self.charac_load * self.l ** 2 / 8  # Max moment under characteristic load.
         self.Wmin = (1.1 * self.Mf - 0.9 * self.Mi) / (0.54 * self.fckt + 1.1 * self.fctm)
 
-    def __str__(self):
-        text = f"IsoVp{int(self.l/1000)}"
+        if self.h < self.hflex()[0]: # check if the selected h is smallet than the required one by deflection considerations
+            self.h = self.hflex()[0]
+
+        if self.b < self.hflex()[1]:
+            self.b = self.hflex()[1]
+
+    def __str__(self) -> str:
+        text = f"IsoPB{int(self.l/1000)}"
         return text
 
-    def __repr__(self) -> dict:
+    def Properties(self) -> dict:
         Pmin = self.Pmin()
         Pmax = self.Pmax()
         Ap = self.Ap(Pmin)
+        Imin = self.Iflex()
         instantLosses = self.instantLosses(Pmin, Ap)
         timedepLosses = self.timedepLosses(Pmin, Ap)
 
         return {"Ab mm2": self.Ab,
+                "h mm" : self.h,
+                "b mm" : self.b,
                 "Wb cm3": self.Wb * 1e-3,
+                "Wmin cm3": self.Wmin * 1e-3,
+                "Ib cm4": self.I * 1e-4,
+                "Imin cm4": Imin * 1e-4,
                 "hflex mm": self.hflex(),
                 "self weight kN/m": self.selfweight,
                 "char load kN/m": self.charac_load,
@@ -105,15 +127,14 @@ class posTensionedIsoBeam:
                 "almost frecuent load kN/m": self.almostper_load,
                 "Mi mkN": self.Mi * 1e-6,
                 "Mf nKN": self.Mf * 1e-6,
-                "Wmin cm3": self.Wmin * 1e-3,
-                "Pmin kN": self.Pmin() * 1e-3,
-                "Pmax kN": self.Pmax() * 1e-3,
+                "Pmin kN": Pmin * 1e-3,
+                "Pmax kN": Pmax * 1e-3,
                 "Ap mm2": Ap,
                 "instantLosses kN": instantLosses * 1e-3,
                 "timedepLosses kN": timedepLosses * 1e-3
                 }
 
-    def hflex(self):
+    def hflex(self): # COMPROBAR QUE LA SALIDA DE HFLEX ES IGUAL A LAS H Y B ELEGIDAS SI SON MAYORES PONER LAS DE HFLEX.
         # finder of the minimum heigh of the beam with b = 2h/3 that has a maximum deflection of l/400
         h = pow(93.75 * self.frec_full_load * self.l ** 3 / self.Ec, 0.25)
         a = int(h / 50) * 50
@@ -301,6 +322,7 @@ class reinforcedIsoBeam:
     Ec = 34000
     Phi = 2  # creep coeffitient
     eps_cd0 = 0.00041  # initial shrinkage strain
+    rec = 30  # concrete cover
     #  Passive steel properties
     fyk = 500
     Es = 200000
@@ -329,7 +351,6 @@ class reinforcedIsoBeam:
         self.b = b
         self.l = l
 
-        self.rec = 30  # concrete cover
         self.ds1 = self.h + self.rec
 
         self.Ab = self.h * self.b  # gross cross section
@@ -370,8 +391,9 @@ class reinforcedIsoBeam:
 
 
 if __name__ == "__main__":
-    viga = posTensionedIsoBeam(600, 550, 317.5, 20000)
-    print(viga.hflex())
-    print(viga.Iflex())
+    viga = posTensionedIsoBeam(20000)
+    print(viga.Properties())
+    # print(viga.hflex())
+    # print(viga.Iflex())
 
 
