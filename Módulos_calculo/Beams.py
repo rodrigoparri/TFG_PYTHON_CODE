@@ -11,7 +11,7 @@ class posTensionedIsoBeam:
     Ec = 34000
     Phi = 2  # creep coeffitient
     eps_cd0 = 0.00041  # initial shrinkage strain
-    rec = 40  # concrete cover
+    reca = 40  # concrete cover
     # Active steel properties
     fpk = 1860
     # fpd = 1617.391
@@ -20,6 +20,7 @@ class posTensionedIsoBeam:
     #  Passive steel properties
     fyk = 500
     Es = 200000
+    recp = 30
     # load at transfer N/mm2
     construction = 1
     # full loads N/mm
@@ -43,16 +44,16 @@ class posTensionedIsoBeam:
     }
     # bars D:area
     bars = {
-        6:28.27,
-        8:50.27,
-        10:78.54,
-        12:113.10,
-        14:153.94,
-        16:201.06,
-        20:314.16,
-        25:490.87,
-        32:804.25,
-        40:1256.64
+        6: 28.27,
+        8: 50.27,
+        10: 78.54,
+        12: 113.10,
+        14: 153.94,
+        16: 201.06,
+        20: 314.16,
+        25: 490.87,
+        32: 804.25,
+        40: 1256.64
     }
 
     def __init__(self, l):
@@ -70,7 +71,7 @@ class posTensionedIsoBeam:
         else:
             self.b = width
 
-        self.e = self.h / 2 - (self.rec + list(self.ducts.keys())[0] / 2)
+        self.e = self.h / 2 - (self.reca + list(self.ducts.keys())[0] / 2)
         self.dp = self.h / 2 + self.e
 
         self.Ab = self.h * self.b  # gross cross section
@@ -94,14 +95,14 @@ class posTensionedIsoBeam:
         self.Mu = self.charac_load * self.l ** 2 / 8  # Max moment under characteristic load.
         self.Wmin = (1.1 * self.Mf - 0.9 * self.Mi) / (0.54 * self.fckt + 1.1 * self.fctm)
 
-        if self.h < self.hflex()[0]: # check if the selected h is smallet than the required one by deflection considerations
+        if self.h < self.hflex()[0]:  # check if the selected h is smallet than the required one by deflection considerations
             self.h = self.hflex()[0]
 
         if self.b < self.hflex()[1]:
             self.b = self.hflex()[1]
 
     def __str__(self) -> str:
-        text = f"IsoPB{int(self.l/1000)}"
+        text = f"IsoPB{int(self.l / 1000)}"
         return text
 
     def Properties(self) -> dict:
@@ -113,8 +114,8 @@ class posTensionedIsoBeam:
         timedepLosses = self.timedepLosses(Pmin, Ap)
 
         return {"Ab mm2": self.Ab,
-                "h mm" : self.h,
-                "b mm" : self.b,
+                "h mm": self.h,
+                "b mm": self.b,
                 "Wb cm3": self.Wb * 1e-3,
                 "Wmin cm3": self.Wmin * 1e-3,
                 "Ib cm4": self.I * 1e-4,
@@ -134,7 +135,8 @@ class posTensionedIsoBeam:
                 "timedepLosses kN": timedepLosses * 1e-3
                 }
 
-    def hflex(self): # COMPROBAR QUE LA SALIDA DE HFLEX ES IGUAL A LAS H Y B ELEGIDAS SI SON MAYORES PONER LAS DE HFLEX.
+    def hflex(
+            self):  # COMPROBAR QUE LA SALIDA DE HFLEX ES IGUAL A LAS H Y B ELEGIDAS SI SON MAYORES PONER LAS DE HFLEX.
         # finder of the minimum heigh of the beam with b = 2h/3 that has a maximum deflection of l/400
         h = pow(93.75 * self.frec_full_load * self.l ** 3 / self.Ec, 0.25)
         a = int(h / 50) * 50
@@ -156,12 +158,12 @@ class posTensionedIsoBeam:
         I = 5 * 400 * self.frec_full_load * pow(self.l, 3) / (384 * self.Ec)
         return I
 
-    def Pmin(self): # Magnel diagram
+    def Pmin(self):  # Magnel diagram
         # Pmin will always be determined by the intersection of lines 4 (tension under full loads) and P*e
         Pmin = (-self.fctm * self.Wb / 0.9 + self.Mf / 0.9) * (1 / (self.e + self.h / 6))
         return Pmin
 
-    def Pmax(self): # Magnel diagram
+    def Pmax(self):  # Magnel diagram
         Pmax = 0
         # Pmax will be the minimun between the intersection of both lines 1 and 2 with P*e
         Pmax1 = (self.fctmt * self.Wb / 1.1 + self.Mi / 1.1) * (1 / (self.e - self.h / 6))
@@ -186,25 +188,56 @@ class posTensionedIsoBeam:
         Ah = self.b * self.h + (np - 1) * Ap  # homogeneous cross section
         # position of the centroid from top fibre
         y = (self.h / 2 * (self.h * self.b) + self.dp * (ns - 1) * Ap + d1 * (ns - 1) * As1 + d2 * (ns - 1) + As2) / Ah
-        Ih = self.b * self.h ** 3 / 12 + Ap * (np - 1) * self.dp ** 2 + d1 ** 2 * (ns - 1) * As1 + d2 ** 2 * (ns - 1) * As2
+        Ih = self.b * self.h ** 3 / 12 + Ap * (np - 1) * self.dp ** 2 + d1 ** 2 * (ns - 1) * As1 + d2 ** 2 * (
+                    ns - 1) * As2
         return Ah, y, Ih
 
-    def cracked(self, P, Ap, D): #D=diameter. is convenient to use P after all losses have been applied.
-        tau_bm = 7.84 - .12 * D
+    def cracked(self, P, Ap, As1=0, As2=0, Dp=0, Ds1=0,
+                Ds2=0):  # D=diameter. is convenient to use P after all losses have been applied.
+        tau_bms1 = 7.84 - .12 * Ds1  # transmision stress for passive reinforcement
+        tau_bms2 = 7.84 - .12 * Ds2
+        x = self.dp  # stablish x=dp to start iterating until an equilibrium solution is found.
 
-        cracked = False  # check if max tensile tension is bigger than concrete´s tensile strenght
-        sectionHomo = self.sectionHomo(Ap, self.h - 0.06)
-        ytension = self.h - sectionHomo[1]  # distance between section´s centroid and lower side
-        sigma_infmax = -P / sectionHomo[0] - P * e * ytension / sectionHomo[2] + self.Mf * y / sectionHomo[2]
+        # first of all we need to check for equilibrium of forces in order to calculate the depth of the neutral fibre
+        eps_c = 0.6 * self.fck / self.Ec
+        Uc = 1 / 2 * eps_c * x * self.b  # Concrete force
 
-        if sigma_infmax >= self.fctm:
-            cracked = True
-            # S =
+        Us2 = As2 * self.Es * eps_c * (x - self.recp) / x  # top reinforcement force
+
+        # strain components of the active reinforcement
+
+        eps_p1 = P / (self.Ep * Ap)
+        eps_p2 = 1 / self.Ec * (P / self.Ab + P * self.e ** 2 / self.I)
+        eps_p3 = eps_c * (self.dp / x - 1)
+        Up = Ap * self.Ep * (eps_p1 + eps_p2 + eps_p3)  # active reinforcement force
+
+        eps_s2 = eps_c * ((self.h - self.recp) / x - 1)
+        Us1 = As1 * self.Es * eps_s2  # bottom passive reinforcement force.
+
+        n = 0
+        while Uc + Us2 - Up - Us1 > 0 and n < 100:
+            n += 1  # Security counter
+            x -= 5  # x is reduced by 5 mm in each round.
+
+            eps_c = 0.6 * self.fck / self.Ec
+            Uc = 1 / 2 * eps_c * x * self.b
+
+            Us2 = As2 * self.Es * eps_c * (x - self.recp) / x
+
+            eps_p1 = P / (self.Ep * Ap)
+            eps_p2 = 1 / self.Ec * (P / self.Ab + P * self.e ** 2 / self.I)
+            eps_p3 = eps_c * (self.dp / x - 1)
+            Up = Ap * self.Ep * (eps_p1 + eps_p2 + eps_p3)
+
+            eps_s2 = eps_c * (self.h - self.recp) / x - 1
+            Us1 = As1 * self.Es * eps_s2
+
+        return x, n
 
     def instantLosses(self, P, Ap):  # nu and gamma are the frictión coefficient and involuntary curvature respectively
         delta_Pfric = P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l ** 2 + self.gamma)))  # Friction losses
         delta_shortConcrete = self.Ep / self.Ect * (
-                    P / self.Ab + P * self.e ** 2 / self.I) * Ap  # Losses caused by concrete´s elastic shortening
+                P / self.Ab + P * self.e ** 2 / self.I) * Ap  # Losses caused by concrete´s elastic shortening
         alpha = 2 * P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l ** 2 + self.gamma))) / self.l
         L_c = math.sqrt(2 * 3 * self.Ep * Ap / alpha)
         # delta_Pjack = math.sqrt(2 * 3 * alpha * self.Ep * Ap)
@@ -219,7 +252,7 @@ class posTensionedIsoBeam:
         phi = 2
         ho = self.Ab / (self.h + self.b)
         kh = 0
-        sectionHomo = self.sectionHomo(Ap, self.h / 2 + self.e)  # Ab, y, Ib
+        sectionHomo = self.sectionHomo(Ap)  # Ab, y, Ib
         relaxation = 0
 
         if ho <= 200:
@@ -235,13 +268,13 @@ class posTensionedIsoBeam:
 
         # eps_cd = kh * betha_ds * self.eps_cd0  # drying strain
         eps_cd = kh * self.eps_cd0
-        #eps_ca = betha_ds * 2.5 * (self.fck - 10) * (10 ** -6)  # shrinkage strain
+        # eps_ca = betha_ds * 2.5 * (self.fck - 10) * (10 ** -6)  # shrinkage strain
         eps_ca = 2.5 * (self.fck - 10) * (10 ** -6)
         eps_cs = eps_cd + eps_ca  # total shrinkage strain
 
         # calculate stress with Ep*epsp calculate eps with the gross cross section and multiply by 2,9 to account for relaxation
         initial_tension = self.Ep / self.Ec * (
-                    - P / sectionHomo[0] - (P * self.e ** 2 + M * self.e) / sectionHomo[2])
+                - P / sectionHomo[0] - (P * self.e ** 2 + M * self.e) / sectionHomo[2])
         initial_tension = abs(initial_tension)
 
         if initial_tension >= .6 * self.fpk:
@@ -256,7 +289,7 @@ class posTensionedIsoBeam:
 
         numerator = Ap * eps_cs * self.Ep + .8 * abs(initial_tension - sigma_pr) + self.Ep / self.Ec * phi * sigma_cQp
         denominator = 1 + self.Ep * Ap / (self.Ec * self.Ab) * (1 + self.Ab / self.I * sectionHomo[1] ** 2) * (
-                    1 + .8 * phi)
+                1 + .8 * phi)
 
         timedepLosses = numerator / denominator
         return timedepLosses
@@ -274,24 +307,24 @@ class posTensionedIsoBeam:
 
         return Ap
 
-    def checkInstDeflect(self, Ap, EqLoad):  # checking max isostatic deflection
-        sectionHomo = self.sectionHomo(Ap, self.h / 2 + self.e)
-        deflection = 5 / 384 * (self.frec_full_load - EqLoad) * self.l ** 3 / (self.Ec * sectionHomo[2])
-
-        if deflection < self.l / 400:
-            return True, deflection  # a true value stands for a correct deflection
-        else:
-            return False, deflection  # a false value stands for an incorrect deflection
+    # def checkInstDeflect(self, Ap, EqLoad):  # checking max isostatic deflection
+    #     sectionHomo = self.sectionHomo(Ap, self.h / 2 + self.e)
+    #     deflection = 5 / 384 * (self.frec_full_load - EqLoad) * self.l ** 3 / (self.Ec * sectionHomo[2])
+    #
+    #     if deflection < self.l / 400:
+    #         return True, deflection  # a true value stands for a correct deflection
+    #     else:
+    #         return False, deflection  # a false value stands for an incorrect deflection
 
     def checkELU(self, Ap, As1=0, As2=0):
 
         prevAs1 = As1  # this variables will only be used if M_front < Mu
         prevAs2 = As2
 
-        x = 1.5 * ( Ap * self.fpk + As1 * self.fyk - As2 * self.fyk) / (
-                    1.15 * .8 * self.b * self.fck)  # check where the neutral fibre is countting on the existing Ap
-        M_front = Ap * self.fpk / 1.15 * self.dp + As1 * self.fyk / 1.15 * (self.h - self.rec) \
-                  - As2 * self.fyk * self.rec - 0.32 * x ** 2 * self.b * self.fck / 1.5
+        x = 1.5 * (Ap * self.fpk + As1 * self.fyk - As2 * self.fyk) / (
+                1.15 * .8 * self.b * self.fck)  # check where the neutral fibre is countting on the existing Ap
+        M_front = Ap * self.fpk / 1.15 * self.dp + As1 * self.fyk / 1.15 * (self.h - self.recp) \
+                  - As2 * self.fyk * self.recp - 0.32 * x ** 2 * self.b * self.fck / 1.5
         # Moment generated by the current reinforcement after yielding
 
         if M_front < self.Mu:  # check if ELU moment is bigger than the beam´s strenght
@@ -299,23 +332,23 @@ class posTensionedIsoBeam:
             while self.Mu - M_front > 10:
 
                 increAs1 = (self.Mu - M_front) * 1.15 / (
-                            (self.h - self.rec) * self.fyk)  # passive reinforcement necessary
+                        (self.h - self.recp) * self.fyk)  # passive reinforcement necessary
                 prevAs1 += increAs1
-                x = 1.5 * ( Ap * self.fpk + prevAs1 * self.fyk - prevAs2 * self.fyk) / (
-                    1.15 * .8 * self.b * self.fck)  # recalculate neutral fibre.
+                x = 1.5 * (Ap * self.fpk + prevAs1 * self.fyk - prevAs2 * self.fyk) / (
+                        1.15 * .8 * self.b * self.fck)  # recalculate neutral fibre.
 
                 if x / self.dp > 0.335:  # postensioned strain needs to be checked.
-                    increAs2 = increAs1 # increment in top reinforecemnt is equal to the difference between
-                                                  # the current As1 and the previus value for As1.
+                    increAs2 = increAs1  # increment in top reinforecemnt is equal to the difference between
+                    # the current As1 and the previus value for As1.
                     prevAs2 += increAs2
 
-                M_front = Ap * self.fpk / 1.15 * self.dp + prevAs1 * self.fyk / 1.15 * (self.h - self.rec) - prevAs2 * self.fyk * self.rec - 0.32 * x ** 2 * self.b * self.fck / 1.5
+                M_front = Ap * self.fpk / 1.15 * self.dp + prevAs1 * self.fyk / 1.15 * (
+                            self.h - self.recp) - prevAs2 * self.fyk * self.recp - 0.32 * x ** 2 * self.b * self.fck / 1.5
 
         return M_front, prevAs2, prevAs2
 
 
 class reinforcedIsoBeam:
-
     fck = 35
     fctm = 3.2
     Ec = 34000
@@ -371,9 +404,9 @@ class reinforcedIsoBeam:
     def properties(self):
         pass
 
-    def Wmin(self, b = 0):  # in this context W means bd^2
+    def Wmin(self, b=0):  # in this context W means bd^2
 
-        Wmin = self.Mu * 1.5 / (0.8 * 0.86 * 0.35 * self.fck) #x/d is assumed to be = 0.35
+        Wmin = self.Mu * 1.5 / (0.8 * 0.86 * 0.35 * self.fck)  # x/d is assumed to be = 0.35
 
         if b != 0:  # checks if a "b" parameter has been introduced
             dmin = math.sqrt(Wmin / b)
@@ -386,14 +419,13 @@ class reinforcedIsoBeam:
         As = 1.15 * 0.8 * 0.35 * self.ds1 * self.b * self.fck / 1.5
 
 
-
-
-
 if __name__ == "__main__":
     viga = posTensionedIsoBeam(5000)
+    Pmin = viga.Pmin()
     Ap = viga.Ap(viga.Pmin())
-    print(viga.checkELU(Ap))
+    As1 = viga.checkELU(Ap)[1]
+    As2 = viga.checkELU(Ap)[2]
+    print(viga.cracked(Pmin, Ap, As1, As2))
     # print(viga.hflex())
     # print(viga.Iflex())
-
-
+    # print(viga.timedepLosses(Pmin, Ap))

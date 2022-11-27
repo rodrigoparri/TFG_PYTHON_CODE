@@ -52,11 +52,11 @@ class IsoBeamApp:
             InstantLosses_dict[instance] = self.PBeams[instance].instantLosses(Pmin_dict[instance], Ap_dict[instance])
             TimedepLosses_dict[instance] = self.PBeams[instance].timedepLosses(Pmin_dict[instance], Ap_dict[instance])
 
-        print(Pmin_dict)
-        print(Pmax_dict)
-        print(Ap_dict)
-        print(InstantLosses_dict)
-        print(TimedepLosses_dict)
+        print(f"Pmin {Pmin_dict}")
+        print(f"Pmax {Pmax_dict}")
+        print(f"Ap {Ap_dict}")
+        print(f"InstantLosses {InstantLosses_dict}")
+        print(f"TimedepLosses {TimedepLosses_dict}")
 
         for instance in self.PBeams:
 
