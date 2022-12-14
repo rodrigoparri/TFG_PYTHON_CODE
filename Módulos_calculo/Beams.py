@@ -102,7 +102,7 @@ class posTensionedIsoBeam:
             self.b = self.hflex()[1]
 
     def __str__(self) -> str:
-        text = f"IsoPB{int(self.l / 1000)}"
+        text = f"IsoPB{self.l / 1000}"
         return text
 
     def Properties(self) -> dict:
@@ -134,23 +134,27 @@ class posTensionedIsoBeam:
                 "instantLosses kN": instantLosses * 1e-3,
                 "timedepLosses kN": timedepLosses * 1e-3
                 }
+    @staticmethod
+    def aprox(value, div):
+        """
+        aproximate any continuous value to a set of discrete equally spaced values.
+        :param value: value is the value you want to aproximate to an infinite set of discrete equally spaced values
+        :param div: is the distances between those discrete values
+        :return: the value within the set just above it
+        """
+        a = int(value / div) * div
+        a += div
+
+        return a
+
 
     def hflex(
             self):  # COMPROBAR QUE LA SALIDA DE HFLEX ES IGUAL A LAS H Y B ELEGIDAS SI SON MAYORES PONER LAS DE HFLEX.
         # finder of the minimum heigh of the beam with b = 2h/3 that has a maximum deflection of l/400
         h = pow(93.75 * self.frec_full_load * self.l ** 3 / self.Ec, 0.25)
-        a = int(h / 50) * 50
-
-        if a < h:
-            a = a + 50
-            h = a
-        else:
-            h = a
-
-        b = int(h * 2 / (3 * 50)) * 50
-
-        if b < h * 2 / 3:
-            b = b + 50
+        b = 2 / 3 * h
+        h = self.aprox(h, 50)
+        b = self.aprox(b, 50)
 
         return h, b
 
@@ -192,15 +196,16 @@ class posTensionedIsoBeam:
                     ns - 1) * As2
         return Ah, y, Ih
 
-    def cracked(self, P, Ap, As1=0, As2=0, Dp=0, Ds1=0,
-                Ds2=0):  # D=diameter. is convenient to use P after all losses have been applied.
-        tau_bms1 = 7.84 - .12 * Ds1  # transmision stress for passive reinforcement
-        tau_bms2 = 7.84 - .12 * Ds2
-        x = self.dp  # stablish x=dp to start iterating until an equilibrium solution is found.
+    def cracked(self, P, Ap, As1=0, As2=0, Dp=0, Ds1=0, Ds2=0):# D=diameter. is convenient to use P after all losses have been applied.
+
+        # tau_bms1 = 7.84 - .12 * Ds1  # transmision stress for passive reinforcement
+        # tau_bms2 = 7.84 - .12 * Ds2
+
+        x = self.h  # stablish x=dp to start iterating until an equilibrium solution is found.
 
         # first of all we need to check for equilibrium of forces in order to calculate the depth of the neutral fibre
-        eps_c = 0.6 * self.fck / self.Ec
-        Uc = 1 / 2 * eps_c * x * self.b  # Concrete force
+        eps_c = -1 * 0.6 * self.fck / self.Ec
+        Uc = 1 / 2 * eps_c * self.Ec * x * self.b  # Concrete force
 
         Us2 = As2 * self.Es * eps_c * (x - self.recp) / x  # top reinforcement force
 
@@ -208,18 +213,22 @@ class posTensionedIsoBeam:
 
         eps_p1 = P / (self.Ep * Ap)
         eps_p2 = 1 / self.Ec * (P / self.Ab + P * self.e ** 2 / self.I)
-        eps_p3 = eps_c * (self.dp / x - 1)
+        eps_p3 = eps_c * (1 - self.dp / x)
         Up = Ap * self.Ep * (eps_p1 + eps_p2 + eps_p3)  # active reinforcement force
 
-        eps_s2 = eps_c * ((self.h - self.recp) / x - 1)
-        Us1 = As1 * self.Es * eps_s2  # bottom passive reinforcement force.
+        eps_s1 = eps_c * (1 - (self.h - self.recp) / x)
+        Us1 = As1 * self.Es * (eps_s1)  # bottom passive reinforcement force.
 
+        M = Up * self.dp + Us1 * (self.h - self.recp) - Uc * x / 3 - Us2 * (self.recp)
         n = 0
-        while Uc + Us2 - Up - Us1 > 0 and n < 100:
+        # "Up" might not be big enough to equilibrate the compression forces for the given strain plane.
+        # so added with its sign while the sum of all the forces is negative. the depth of the compresion block
+        # will continue to decrease as active reinforcement strain will continue to grow
+        while Uc + Us2 + Up + Us1 < 0 or M < self.Mf and n < 100: # while compresion is too high or moment equilibrium is not met.
             n += 1  # Security counter
-            x -= 5  # x is reduced by 5 mm in each round.
+            x -= 1  # x is reduced by 5 mm in each round.
 
-            eps_c = 0.6 * self.fck / self.Ec
+            eps_c = -1 * 0.6 * self.fck / self.Ec
             Uc = 1 / 2 * eps_c * x * self.b
 
             Us2 = As2 * self.Es * eps_c * (x - self.recp) / x
@@ -229,9 +238,20 @@ class posTensionedIsoBeam:
             eps_p3 = eps_c * (self.dp / x - 1)
             Up = Ap * self.Ep * (eps_p1 + eps_p2 + eps_p3)
 
-            eps_s2 = eps_c * (self.h - self.recp) / x - 1
+            eps_s2 = eps_c * ((self.h - self.recp) / x - 1)
             Us1 = As1 * self.Es * eps_s2
 
+            M = Up * self.dp + Us1 * (self.h - self.recp) - Uc * x / 3 - Us2 * (self.recp)
+
+        Ap_13 = abs(self.aprox(Ap, 98.74))
+        Ap_15 = abs(self.aprox(Ap, 140))
+
+        n_13 = Ap_13 / 98.74
+        n_15 = Ap_15 / 140
+
+
+        Act = (self.h - x) * self.b
+        # S = 0.25 * self.fctm / 4.8 * Act *
         return x, n
 
     def instantLosses(self, P, Ap):  # nu and gamma are the frictión coefficient and involuntary curvature respectively

@@ -1,29 +1,18 @@
 import Beams
+import pandas as pd
 
 class IsoBeamApp:
 
     """
     this class contains all the logic necessary to make the app run
     """
-    lengths_list = (
-        5000,
-        6000,
-        7000,
-        8000,
-        9000,
-        10000,
-        11000,
-        12000,
-        13000,
-        14000,
-        15000
-    )
+    # lengths_list = list(range(5000, 15000, 500))
 
-    def __init__(self):
+    def __init__(self, limit, step):
         properties_dict = {}
         self.PBeams={}
         # create one instance for every length in length_list
-        for length in self.lengths_list:
+        for length in self.lengen(limit, step):
             """
             instances is a dictionary where __str__ methods are keys and instances are values. Properties is a dictionary
             where __str__ methods are keys and each instance´s properties methods are values. 
@@ -32,6 +21,14 @@ class IsoBeamApp:
         #     properties_dict[str(Beams.posTensionedIsoBeam(length))] = Beams.posTensionedIsoBeam(length).Properties()
         # print(instances)
         # print(properties_dict)
+
+    @staticmethod
+    def lengen(limit, step):
+
+        n = 5000
+        while n < limit:
+            yield n
+            n += step
 
     def Pcal(self):  # Calculations for postensioned beams
 
@@ -42,7 +39,7 @@ class IsoBeamApp:
         InstantLosses_dict = {}
         TimedepLosses_dict = {}
         PasiveReinforcement_dict = {}
-
+        dict_1 = self.PBeams
 
         for instance in self.PBeams:
 
@@ -52,6 +49,7 @@ class IsoBeamApp:
             InstantLosses_dict[instance] = self.PBeams[instance].instantLosses(Pmin_dict[instance], Ap_dict[instance])
             TimedepLosses_dict[instance] = self.PBeams[instance].timedepLosses(Pmin_dict[instance], Ap_dict[instance])
 
+        df = pd.DataFrame.from_dict([])
         print(f"Pmin {Pmin_dict}")
         print(f"Pmax {Pmax_dict}")
         print(f"Ap {Ap_dict}")
@@ -64,6 +62,7 @@ class IsoBeamApp:
                                                  self.PBeams[instance].checkELU(Ap_dict[instance])[2]
 
         print(PasiveReinforcement_dict)
+        print(df)
 
 if __name__ == "__main__":
     App = IsoBeamApp()
