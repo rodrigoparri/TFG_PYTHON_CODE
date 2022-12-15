@@ -59,7 +59,7 @@ class IsoreinforcedBeam:
 
     def __init__(self, limit, step):
         self.RBeams = {}
-        for length in lengen(limit, step):
+        for length in self.lengen(limit, step):
             pass
     @staticmethod
     def lengen(limit, step):  # method that generates the next length as it´s called

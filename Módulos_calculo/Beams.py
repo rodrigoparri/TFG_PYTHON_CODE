@@ -382,6 +382,7 @@ class reinforcedIsoBeam:
     selfweight = 0
     partwalls = 1
     use_load = 0
+    flooring = 1.5
     # bars D:area
     bars = {
         6: 28.27,
@@ -396,12 +397,16 @@ class reinforcedIsoBeam:
         40: 1256.64
     }
 
-    def __init__(self, h, b, l):
-        self.h = h
-        self.b = b
-        self.l = l
+    def __init__(self, l):
 
-        self.ds1 = self.h + self.rec
+        self.h = l / 25
+        width = int(self.h * 2 / 150) * 50
+        if width < (self.h * 2 / 3):
+            self.b = width + 50
+        else:
+            self.b = width
+
+        self.l = l
 
         self.Ab = self.h * self.b  # gross cross section
         self.Wb = self.h ** 2 * self.b / 6  # gross section modulus
@@ -414,13 +419,41 @@ class reinforcedIsoBeam:
         else:
             self.use_load = 2
 
-        self.charac_load = 1.35 * (self.selfweight + self.partwalls) + 1.5 * self.use_load
-        self.almostper_load = self.selfweight + self.partwalls + 0.6 * self.use_load
+        self.charac_load = 1.35 * (self.selfweight + self.partwalls + self.flooring) + 1.5 * self.use_load
+        self.almostper_load = self.selfweight + self.partwalls + self.flooring + 0.6 * self.use_load
         self.Me = self.almostper_load * self.l ** 2 / 8  # Max moment under almost permanent loads
         self.Mu = self.charac_load * self.l ** 2 / 8  # Max moment under characteristic load.
 
+        self.h = self.Wmin(self.b)[1] + self.rec
+
+        height = int(l / 1250) * 50
+        if height < l / 25:
+            self.h = height + 50
+        else:
+            self.h = height
+
+        self.ds1 = self.h + self.rec
+
+    def __str__(self) -> str:
+        text = f"IsoRB{self.l / 1000}"
+        return text
+
     def properties(self):
-        pass
+
+        As = self.As()
+        return {
+            "h mm": self.h,
+            "b mm": self.b,
+            "Wb cm3":self.Wb,
+            "Wmin cm3":self.Wmin(self.b),
+            "Ib cm4": self.I,
+            "self weight kN/m": self.selfweight,
+            "char load kN/m": self.charac_load,
+            "almost frecuent load": self.almostper_load,
+            "Me mkN": self.Me,
+            "Mu mKN":self.Mu,
+            "As mm2": As
+                }
 
     def Wmin(self, b=0):  # in this context W means bd^2
 
@@ -429,15 +462,19 @@ class reinforcedIsoBeam:
         if b != 0:  # checks if a "b" parameter has been introduced
             dmin = math.sqrt(Wmin / b)
             return Wmin, dmin
-
-        return Wmin
+        else:
+            return Wmin
 
     def As(self):
 
-        As = 1.15 * 0.8 * 0.35 * self.ds1 * self.b * self.fck / 1.5
+        As = 1.15 * 0.8 * 0.35 * self.ds1 * self.b * self.fck / (1.5 * self.fyk)
+        return As
 
 
 if __name__ == "__main__":
-    viga = posTensionedIsoBeam(5500)
+    viga = posTensionedIsoBeam(10000)
     Pmin = viga.Pmin()
     print(viga.Ap(Pmin))
+
+    viga2 = reinforcedIsoBeam(10000)
+    print(viga2.As())
