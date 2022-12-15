@@ -65,5 +65,5 @@ class IsoBeamApp:
         print(df)
 
 if __name__ == "__main__":
-    App = IsoBeamApp()
+    App = IsoBeamApp(15000, 1500)
     App.Pcal()

@@ -10,5 +10,5 @@ ducts = {
         145: 15400
     }
 
-print(list(ducts.keys())[0])
-# print(ductsD[0])
+def gen(limit, step):
+        yield
