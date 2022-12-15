@@ -1,7 +1,7 @@
 import Beams
 import pandas as pd
 
-class IsoBeamApp:
+class IsopostBeamApp:
 
     """
     this class contains all the logic necessary to make the app run
@@ -9,10 +9,7 @@ class IsoBeamApp:
     # lengths_list = list(range(5000, 15000, 500))
 
     def __init__(self, limit, step):
-        properties_dict = {}
         self.PBeams = {}  # create one instance for every length in lengen
-
-
         for length in self.lengen(limit, step):
             """
             instances is a dictionary where __str__ methods are keys and instances are values. Properties is a dictionary
@@ -58,6 +55,21 @@ class IsoBeamApp:
         pd.set_option("display.max_columns", len(columnnames))
         print(df)
 
+class IsoreinforcedBeam:
+
+    def __init__(self, limit, step):
+        self.RBeams = {}
+        for length in lengen(limit, step):
+            pass
+    @staticmethod
+    def lengen(limit, step):  # method that generates the next length as it´s called
+
+        n = 5000
+        while n <= limit:
+            yield n
+            n += step
+
+
 if __name__ == "__main__":
-    App = IsoBeamApp(20000, 500)
+    App = IsopostBeamApp(20000, 500)
     App.Pcal()
