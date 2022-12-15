@@ -10,60 +10,54 @@ class IsoBeamApp:
 
     def __init__(self, limit, step):
         properties_dict = {}
-        self.PBeams={}
-        # create one instance for every length in length_list
+        self.PBeams = {}  # create one instance for every length in lengen
+
+
         for length in self.lengen(limit, step):
             """
             instances is a dictionary where __str__ methods are keys and instances are values. Properties is a dictionary
             where __str__ methods are keys and each instance´s properties methods are values. 
             """
             self.PBeams[str(Beams.posTensionedIsoBeam(length))] = Beams.posTensionedIsoBeam(length)
-        #     properties_dict[str(Beams.posTensionedIsoBeam(length))] = Beams.posTensionedIsoBeam(length).Properties()
-        # print(instances)
-        # print(properties_dict)
 
     @staticmethod
-    def lengen(limit, step):
+    def lengen(limit, step):  # method that generates the next length as it´s called
 
         n = 5000
-        while n < limit:
+        while n <= limit:
             yield n
             n += step
 
     def Pcal(self):  # Calculations for postensioned beams
 
-        # Create dictionaries with the instance´s properties necessary for the calculations
-        Pmin_dict = {}
-        Pmax_dict = {}
-        Ap_dict = {}
-        InstantLosses_dict = {}
-        TimedepLosses_dict = {}
-        PasiveReinforcement_dict = {}
-        dict_1 = self.PBeams
+        # Create only one dict with each instance as key and a tuple with every result from calculations.
+        # the order in the tuple will be: Pmin, Pmax, Ap, sectionHomo(tuple), instantlosses, timedeplosses, passive reinforcement, cracked.
+        beamcalc = dict()
+        columnnames = ()
 
         for instance in self.PBeams:
 
-            Pmin_dict[instance] = self.PBeams[instance].Pmin()
-            Pmax_dict[instance] = self.PBeams[instance].Pmax()
-            Ap_dict[instance] = self.PBeams[instance].Ap(Pmin_dict[instance])
-            InstantLosses_dict[instance] = self.PBeams[instance].instantLosses(Pmin_dict[instance], Ap_dict[instance])
-            TimedepLosses_dict[instance] = self.PBeams[instance].timedepLosses(Pmin_dict[instance], Ap_dict[instance])
+            b = self.PBeams[instance].b
+            h = self.PBeams[instance].h
+            e = self.PBeams[instance].e
+            Pmin = self.PBeams[instance].Pmin()
+            Pmax = self.PBeams[instance].Pmax()
+            Ap = self.PBeams[instance].Ap(Pmin)
+            sectionhomo = self.PBeams[instance].sectionHomo(Ap)
+            instantlosses = self.PBeams[instance].instantLosses(Pmin, Ap)
+            relinstlosses = instantlosses / Pmin * 100
+            timedeplosses = self.PBeams[instance].timedepLosses(Pmin, Ap, sectionhomo[0], sectionhomo[1], sectionhomo[2])
+            reltimedeplosses = timedeplosses / Pmin * 100
+            passivereinforcement = self.PBeams[instance].checkELU(Ap)
 
-        df = pd.DataFrame.from_dict([])
-        print(f"Pmin {Pmin_dict}")
-        print(f"Pmax {Pmax_dict}")
-        print(f"Ap {Ap_dict}")
-        print(f"InstantLosses {InstantLosses_dict}")
-        print(f"TimedepLosses {TimedepLosses_dict}")
+            beamcalc[instance] = (b, h, e, Pmin, Pmax, Ap, instantlosses, relinstlosses, timedeplosses, reltimedeplosses, passivereinforcement)
+            columnnames = ("b (mm)","h (mm)", "e (mm)", "Pmin (N)", "Pmax (N)", "Ap (mm2)", "instant losses (N)","relative instant losses (%)",
+                           "time dependent losses (N)","relative timen dependent losses (%)", "passive reinforcement (N)")
 
-        for instance in self.PBeams:
-
-            PasiveReinforcement_dict[instance] = self.PBeams[instance].checkELU(Ap_dict[instance])[1], \
-                                                 self.PBeams[instance].checkELU(Ap_dict[instance])[2]
-
-        print(PasiveReinforcement_dict)
+        df = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
+        pd.set_option("display.max_columns", len(columnnames))
         print(df)
 
 if __name__ == "__main__":
-    App = IsoBeamApp(15000, 1500)
+    App = IsoBeamApp(20000, 500)
     App.Pcal()

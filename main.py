@@ -1,4 +1,4 @@
-from Módulos_calculo import Beams
+# from Módulos_calculo import Beams
 ducts = {
         60: 2400,
         75: 3800,
@@ -10,5 +10,12 @@ ducts = {
         145: 15400
     }
 
-def gen(limit, step):
-        yield
+autodict = {}
+
+for n in range(10):
+        autodict[n] = [5,
+                       autodict[n][0] + 1,
+                       autodict[n][1] + 1,
+                       autodict[n][2] + 1
+                       ]
+print(autodict)

@@ -20,7 +20,7 @@ class posTensionedIsoBeam:
     #  Passive steel properties
     fyk = 500
     Es = 200000
-    recp = 30
+    recp = 30  # passive reinforcement concrete cover
     # load at transfer N/mm2
     construction = 1
     # full loads N/mm
@@ -110,8 +110,9 @@ class posTensionedIsoBeam:
         Pmax = self.Pmax()
         Ap = self.Ap(Pmin)
         Imin = self.Iflex()
+        homosection = self.sectionHomo(Ap)
         instantLosses = self.instantLosses(Pmin, Ap)
-        timedepLosses = self.timedepLosses(Pmin, Ap)
+        timedepLosses = self.timedepLosses(Pmin, Ap,homosection[0], homosection[1], homosection[2])
 
         return {"Ab mm2": self.Ab,
                 "h mm": self.h,
@@ -127,7 +128,7 @@ class posTensionedIsoBeam:
                 "frec full load kN/m": self.frec_full_load,
                 "almost frecuent load kN/m": self.almostper_load,
                 "Mi mkN": self.Mi * 1e-6,
-                "Mf nKN": self.Mf * 1e-6,
+                "Mf mKN": self.Mf * 1e-6,
                 "Pmin kN": Pmin * 1e-3,
                 "Pmax kN": Pmax * 1e-3,
                 "Ap mm2": Ap,
@@ -139,7 +140,7 @@ class posTensionedIsoBeam:
         """
         aproximate any continuous value to a set of discrete equally spaced values.
         :param value: value is the value you want to aproximate to an infinite set of discrete equally spaced values
-        :param div: is the distances between those discrete values
+        :param div: is the distance between those discrete values
         :return: the value within the set just above it
         """
         a = int(value / div) * div
@@ -148,8 +149,7 @@ class posTensionedIsoBeam:
         return a
 
 
-    def hflex(
-            self):  # COMPROBAR QUE LA SALIDA DE HFLEX ES IGUAL A LAS H Y B ELEGIDAS SI SON MAYORES PONER LAS DE HFLEX.
+    def hflex(self):  # COMPROBAR QUE LA SALIDA DE HFLEX ES IGUAL A LAS H Y B ELEGIDAS SI SON MAYORES PONER LAS DE HFLEX.
         # finder of the minimum heigh of the beam with b = 2h/3 that has a maximum deflection of l/400
         h = pow(93.75 * self.frec_full_load * self.l ** 3 / self.Ec, 0.25)
         b = 2 / 3 * h
@@ -194,9 +194,9 @@ class posTensionedIsoBeam:
         y = (self.h / 2 * (self.h * self.b) + self.dp * (ns - 1) * Ap + d1 * (ns - 1) * As1 + d2 * (ns - 1) + As2) / Ah
         Ih = self.b * self.h ** 3 / 12 + Ap * (np - 1) * self.dp ** 2 + d1 ** 2 * (ns - 1) * As1 + d2 ** 2 * (
                     ns - 1) * As2
-        return Ah, y, Ih
+        return Ah, y, Ih  # Homogenized cross section, neutral plane, depth homogenized inertia.
 
-    def cracked(self, P, Ap, As1=0, As2=0, Dp=0, Ds1=0, Ds2=0):# D=diameter. is convenient to use P after all losses have been applied.
+    def cracked(self, P, Ap, As1=0, As2=0, Dp=0, Ds1=0, Ds2=0): # D=diameter. is convenient to use P after all losses have been applied.
 
         # tau_bms1 = 7.84 - .12 * Ds1  # transmision stress for passive reinforcement
         # tau_bms2 = 7.84 - .12 * Ds2
@@ -266,13 +266,12 @@ class posTensionedIsoBeam:
         instantLosses = delta_Pfric + delta_shortConcrete + delta_Pjack
         return instantLosses
 
-    def timedepLosses(self, P, Ap):
+    def timedepLosses(self, P, Ap, homoarea, homoy, homoinertia):
 
         M = self.Me
         phi = 2
         ho = self.Ab / (self.h + self.b)
         kh = 0
-        sectionHomo = self.sectionHomo(Ap)  # Ab, y, Ib
         relaxation = 0
 
         if ho <= 200:
@@ -294,7 +293,7 @@ class posTensionedIsoBeam:
 
         # calculate stress with Ep*epsp calculate eps with the gross cross section and multiply by 2,9 to account for relaxation
         initial_tension = self.Ep / self.Ec * (
-                - P / sectionHomo[0] - (P * self.e ** 2 + M * self.e) / sectionHomo[2])
+                - P / homoarea - (P * self.e ** 2 + M * self.e) / homoinertia)
         initial_tension = abs(initial_tension)
 
         if initial_tension >= .6 * self.fpk:
@@ -308,33 +307,32 @@ class posTensionedIsoBeam:
         sigma_cQp = initial_tension / self.Ep
 
         numerator = Ap * eps_cs * self.Ep + .8 * abs(initial_tension - sigma_pr) + self.Ep / self.Ec * phi * sigma_cQp
-        denominator = 1 + self.Ep * Ap / (self.Ec * self.Ab) * (1 + self.Ab / self.I * sectionHomo[1] ** 2) * (
+        denominator = 1 + self.Ep * Ap / (self.Ec * self.Ab) * (1 + self.Ab / self.I * homoy ** 2) * (
                 1 + .8 * phi)
 
         timedepLosses = numerator / denominator
         return timedepLosses
 
     def Ap(self, P):
-        trialAp = 10  # trialAp must always be bigger than the reference value in the while loop
-        Ap = 0
-        n = 0
-        Pmin = P
+        Apin = 10  # trialAp must always be bigger than the reference value in the while loop
+        Apout = 0
 
-        while n < 15:  # reference value.
-            Ap = self.instantLosses(Pmin, trialAp) / (0.1 * self.fpk)
-            trialAp = Ap
-            n += 1
+        while True:  # reference value.
+            Apout = self.instantLosses(P, Apin) / (0.1 * self.fpk)
+            if abs(Apout - Apin) > 1:
+                Apin = Apout
+                continue
+            else:
+                break
+        return Apout
 
-        return Ap
+    def checkInstDeflect(self, Ap, EqLoad, inertiahomo):  # checking max isostatic deflection
+        deflection = 5 / 384 * (self.frec_full_load - EqLoad) * self.l ** 3 / (self.Ec * inertiahomo)
 
-    # def checkInstDeflect(self, Ap, EqLoad):  # checking max isostatic deflection
-    #     sectionHomo = self.sectionHomo(Ap, self.h / 2 + self.e)
-    #     deflection = 5 / 384 * (self.frec_full_load - EqLoad) * self.l ** 3 / (self.Ec * sectionHomo[2])
-    #
-    #     if deflection < self.l / 400:
-    #         return True, deflection  # a true value stands for a correct deflection
-    #     else:
-    #         return False, deflection  # a false value stands for an incorrect deflection
+        if deflection < self.l / 400:
+            return True, deflection  # a true value stands for a correct deflection
+        else:
+            return False, deflection  # a false value stands for an incorrect deflection
 
     def checkELU(self, Ap, As1=0, As2=0):
 
@@ -365,7 +363,7 @@ class posTensionedIsoBeam:
                 M_front = Ap * self.fpk / 1.15 * self.dp + prevAs1 * self.fyk / 1.15 * (
                             self.h - self.recp) - prevAs2 * self.fyk * self.recp - 0.32 * x ** 2 * self.b * self.fck / 1.5
 
-        return M_front, prevAs2, prevAs2
+        return prevAs1, prevAs2
 
 
 class reinforcedIsoBeam:
@@ -440,12 +438,6 @@ class reinforcedIsoBeam:
 
 
 if __name__ == "__main__":
-    viga = posTensionedIsoBeam(5000)
+    viga = posTensionedIsoBeam(5500)
     Pmin = viga.Pmin()
-    Ap = viga.Ap(viga.Pmin())
-    As1 = viga.checkELU(Ap)[1]
-    As2 = viga.checkELU(Ap)[2]
-    print(viga.cracked(Pmin, Ap, As1, As2))
-    # print(viga.hflex())
-    # print(viga.Iflex())
-    # print(viga.timedepLosses(Pmin, Ap))
+    print(viga.Ap(Pmin))
