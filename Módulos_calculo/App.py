@@ -30,7 +30,7 @@ class IsopostBeamApp:
         # Create only one dict with each instance as key and a tuple with every result from calculations.
         # the order in the tuple will be: Pmin, Pmax, Ap, sectionHomo(tuple), instantlosses, timedeplosses, passive reinforcement, cracked.
         beamcalc = dict()
-        columnnames = ()
+
 
         for instance in self.PBeams:
 
@@ -48,19 +48,24 @@ class IsopostBeamApp:
             passivereinforcement = self.PBeams[instance].checkELU(Ap)
 
             beamcalc[instance] = (b, h, e, Pmin, Pmax, Ap, instantlosses, relinstlosses, timedeplosses, reltimedeplosses, passivereinforcement)
-            columnnames = ("b (mm)","h (mm)", "e (mm)", "Pmin (N)", "Pmax (N)", "Ap (mm2)", "instant losses (N)","relative instant losses (%)",
-                           "time dependent losses (N)","relative timen dependent losses (%)", "passive reinforcement (N)")
 
-        df = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
+        columnnames = ("b (mm)","h (mm)", "e (mm)", "Pmin (N)", "Pmax (N)", "Ap (mm2)", "instant losses (N)","relative instant losses (%)",
+                           "time dependent losses (N)","relative time dependent losses (%)", "passive reinforcement (N)")
+
+        pdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
-        print(df)
+        print(pdf)
 
 class IsoreinforcedBeam:
 
     def __init__(self, limit, step):
+
         self.RBeams = {}
+
         for length in self.lengen(limit, step):
-            pass
+
+            self.RBeams[str(Beams.reinforcedIsoBeam(length))] = Beams.reinforcedIsoBeam(length)
+
     @staticmethod
     def lengen(limit, step):  # method that generates the next length as it´s called
 
@@ -69,7 +74,26 @@ class IsoreinforcedBeam:
             yield n
             n += step
 
+    def Rcal(self):
+        beamcalc = {}
+
+        for instance in self.RBeams:
+
+            b = self.RBeams[instance].b
+            h = self.RBeams[instance].h
+            As = self.RBeams[instance].As()
+
+            beamcalc[instance] = (b, h, As)
+
+        columnnames = ("b (mm)", "h (mm)", "As (mm2)")
+        rdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
+        pd.set_option("display.max_columns", len(columnnames))
+        print(rdf)
+
 
 if __name__ == "__main__":
-    App = IsopostBeamApp(20000, 500)
-    App.Pcal()
+    # App = IsopostBeamApp(10000, 1000)
+    # App.Pcal()
+
+    App2 = IsoreinforcedBeam(20000, 1000)
+    App2.Rcal()

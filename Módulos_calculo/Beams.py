@@ -11,7 +11,7 @@ class posTensionedIsoBeam:
     Ec = 34000
     Phi = 2  # creep coeffitient
     eps_cd0 = 0.00041  # initial shrinkage strain
-    reca = 40  # concrete cover
+    reca = 40  # concrete cover of the active reinforcement
     # Active steel properties
     fpk = 1860
     # fpd = 1617.391
@@ -204,7 +204,7 @@ class posTensionedIsoBeam:
         x = self.h  # stablish x=dp to start iterating until an equilibrium solution is found.
 
         # first of all we need to check for equilibrium of forces in order to calculate the depth of the neutral fibre
-        eps_c = -1 * 0.6 * self.fck / self.Ec
+        eps_c = -1 * 0.6 * self.fck / self.Ec # concrete max strain
         Uc = 1 / 2 * eps_c * self.Ec * x * self.b  # Concrete force
 
         Us2 = As2 * self.Es * eps_c * (x - self.recp) / x  # top reinforcement force
@@ -347,7 +347,7 @@ class posTensionedIsoBeam:
 
         if M_front < self.Mu:  # check if ELU moment is bigger than the beam´s strenght
 
-            while self.Mu - M_front > 10:
+            while self.Mu - M_front > 0:
 
                 increAs1 = (self.Mu - M_front) * 1.15 / (
                         (self.h - self.recp) * self.fyk)  # passive reinforcement necessary
@@ -361,7 +361,7 @@ class posTensionedIsoBeam:
                     prevAs2 += increAs2
 
                 M_front = Ap * self.fpk / 1.15 * self.dp + prevAs1 * self.fyk / 1.15 * (
-                            self.h - self.recp) - prevAs2 * self.fyk * self.recp - 0.32 * x ** 2 * self.b * self.fck / 1.5
+                            self.h - self.recp) - prevAs2 * self.fyk * self.recp / 1.15 - 0.32 * x ** 2 * self.b * self.fck / 1.5
 
         return prevAs1, prevAs2
 
@@ -399,7 +399,7 @@ class reinforcedIsoBeam:
 
     def __init__(self, l):
 
-        self.h = l / 25
+        self.h = l / 25  # first h aproximation
         width = int(self.h * 2 / 150) * 50
         if width < (self.h * 2 / 3):
             self.b = width + 50
@@ -432,7 +432,7 @@ class reinforcedIsoBeam:
         else:
             self.h = height
 
-        self.ds1 = self.h + self.rec
+        self.ds1 = self.h - self.rec
 
     def __str__(self) -> str:
         text = f"IsoRB{self.l / 1000}"
@@ -466,15 +466,85 @@ class reinforcedIsoBeam:
             return Wmin
 
     def As(self):
+        x = 0
+        M = 0.8 * x * self.fck * self.b * (self.ds1 - 0.8 * x / 2) / 1.5
+        prevAs1 = 0
+        prevAs2 = 0
 
-        As = 1.15 * 0.8 * 0.35 * self.ds1 * self.b * self.fck / (1.5 * self.fyk)
-        return As
+        while self.Mu - M > 0:
+            increAs1 = (self.Mu - M) * 1.15 / ((self.h - self.rec) * self.fyk)  # passive reinforcement necessary
+            prevAs1 += increAs1
+            x = 1.5 * (prevAs1 * self.fyk - prevAs2 * self.fyk) / (1.15 * .8 * self.b * self.fck)   # recalculate neutral fibre.
+
+            if x / self.ds1 > 0.35:  # strain needs to be checked.
+                increAs2 = increAs1  # increment in top reinforcement is equal to the difference between
+                # the current As1 and the previous value for As1.
+                prevAs2 += increAs2
+
+            M = prevAs1 * self.fyk / 1.15 * (self.h - self.rec) - prevAs2 * self.fyk / 1.15 * self.rec - 0.32 * x ** 2 * self.b * self.fck / 1.5
+
+        return prevAs1, prevAs2
+
+    def cracked(self, As1, As2):
+
+        x = self.h  # stablish x=dp to start iterating until an equilibrium solution is found.
+
+        # first of all we need to check for equilibrium of forces in order to calculate the depth of the neutral fibre
+        eps_c = -1 * 0.6 * self.fck / self.Ec  # concrete max strain
+        Uc = 1 / 2 * eps_c * self.Ec * x * self.b  # Concrete force
+
+        eps_s2 = eps_c * (self.rec / x - 1)
+        Us2 = As2 * self.Es * eps_s2  # top reinforcement force
+
+        eps_s1 = eps_c * (self.ds1 / x - 1)  # bottom reinforcement strain
+        Us1 = As1 * self.Es * eps_s1  # bottom passive reinforcement force.
+
+        M = Us1 * self.ds1 + Uc * x / 3 + Us2 * (self.rec)
+        n = 0
+        # so added with its sign while the sum of all the forces is negative. the depth of the compresion block
+        # will continue to decrease as active reinforcement strain will continue to grow
+        while Uc + Us2 + Us1 < 0 or M < self.Me and n < 100: # while compresion is too high or moment equilibrium is not met.
+            n += 1  # Security counter
+            x -= 1  # x is reduced by 5 mm in each round.
+
+            eps_c = -1 * 0.6 * self.fck / self.Ec
+            Uc = 1 / 2 * eps_c * x * self.b
+
+            eps_s2 = eps_c * (self.rec / x - 1)
+            Us2 = As2 * self.Es * eps_s2
+
+            eps_s1 = eps_c * (self.ds1 / x - 1)
+            Us1 = As1 * self.Es * eps_s1
+
+            M = Us1 * self.ds1 - Uc * x / 3 - Us2 * (self.rec)
+
+        phi = 0
+        m = 0
+        for bar in self.bars:
+            m = As1 / self.bars[bar]
+
+            if (2 * self.rec + m * bar + (m - 1) * 20) < self.b:
+                phi = bar
+                continue
+            else: break
+
+        Act = (self.h - x) * self.b  # tensioned area
+        S = 0.25 * self.fctm / 4.8 * Act / As1 * m * phi
+        w_k = S * (eps_s1 - eps_c)
+
+        if w_k < 0.4:
+            return True
+        else:
+            return False
 
 
 if __name__ == "__main__":
-    viga = posTensionedIsoBeam(10000)
-    Pmin = viga.Pmin()
-    print(viga.Ap(Pmin))
+    # viga = posTensionedIsoBeam(5000)
+    # Pmin = viga.Pmin()
+    # Ap = viga.Ap(Pmin)
+    # As = viga.checkELU(Ap)
+    # print(viga.cracked(Pmin, Ap))
 
-    viga2 = reinforcedIsoBeam(10000)
-    print(viga2.As())
+    viga2 = reinforcedIsoBeam(20000)
+    As = viga2.As()
+    print(viga2.cracked(As[0],As[1]))
