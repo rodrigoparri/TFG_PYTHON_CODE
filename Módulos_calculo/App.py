@@ -82,10 +82,11 @@ class IsoreinforcedBeam:
             b = self.RBeams[instance].b
             h = self.RBeams[instance].h
             As = self.RBeams[instance].As()
+            cracked = self.RBeams[instance].cracked(As[0], As[1])
 
-            beamcalc[instance] = (b, h, As)
+            beamcalc[instance] = (b, h, As, cracked)
 
-        columnnames = ("b (mm)", "h (mm)", "As (mm2)")
+        columnnames = ("b (mm)", "h (mm)", "As (mm2)", "Cracked?")
         rdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
         print(rdf)

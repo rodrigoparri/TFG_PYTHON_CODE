@@ -31,6 +31,12 @@ class posTensionedIsoBeam:
     # instatant losses
     nu = 0.19
     gamma = 0.75 * 1e-5
+    # tendoms
+    tendoms = {
+        12.7: 98.74,
+        15.2: 140
+    }
+
     # ducts D:area
     ducts = {
         60: 2400,
@@ -73,6 +79,7 @@ class posTensionedIsoBeam:
 
         self.e = self.h / 2 - (self.reca + list(self.ducts.keys())[0] / 2)
         self.dp = self.h / 2 + self.e
+        self.ds1 = self.h + self.recp
 
         self.Ab = self.h * self.b  # gross cross section
         self.Wb = self.h ** 2 * self.b / 6  # gross section modulus
@@ -207,19 +214,20 @@ class posTensionedIsoBeam:
         eps_c = -1 * 0.6 * self.fck / self.Ec # concrete max strain
         Uc = 1 / 2 * eps_c * self.Ec * x * self.b  # Concrete force
 
-        Us2 = As2 * self.Es * eps_c * (x - self.recp) / x  # top reinforcement force
+        eps_s2 = -eps_c * (self.recp / x - 1)
+        Us2 = As2 * self.Es * eps_s2  # top reinforcement force
 
         # strain components of the active reinforcement
 
         eps_p1 = P / (self.Ep * Ap)
         eps_p2 = 1 / self.Ec * (P / self.Ab + P * self.e ** 2 / self.I)
-        eps_p3 = eps_c * (1 - self.dp / x)
+        eps_p3 = -eps_c * (self.dp / x - 1)
         Up = Ap * self.Ep * (eps_p1 + eps_p2 + eps_p3)  # active reinforcement force
 
-        eps_s1 = eps_c * (1 - (self.h - self.recp) / x)
-        Us1 = As1 * self.Es * (eps_s1)  # bottom passive reinforcement force.
+        eps_s1 = -eps_c * ((self.ds1 / x) - 1)
+        Us1 = As1 * self.Es * eps_s1  # bottom passive reinforcement force.
 
-        M = Up * self.dp + Us1 * (self.h - self.recp) - Uc * x / 3 - Us2 * (self.recp)
+        M = Up * self.dp + Us1 * self.ds1 + Uc * x / 3 + Us2 * (self.recp)
         n = 0
         # "Up" might not be big enough to equilibrate the compression forces for the given strain plane.
         # so added with its sign while the sum of all the forces is negative. the depth of the compresion block
@@ -228,31 +236,45 @@ class posTensionedIsoBeam:
             n += 1  # Security counter
             x -= 1  # x is reduced by 5 mm in each round.
 
-            eps_c = -1 * 0.6 * self.fck / self.Ec
-            Uc = 1 / 2 * eps_c * x * self.b
+            eps_c = -1 * 0.6 * self.fck / self.Ec  # concrete max strain
+            Uc = 1 / 2 * eps_c * self.Ec * x * self.b  # Concrete force
 
-            Us2 = As2 * self.Es * eps_c * (x - self.recp) / x
+            eps_s2 = -eps_c * (self.recp / x - 1)
+            Us2 = As2 * self.Es * eps_s2  # top reinforcement force
+
+            # strain components of the active reinforcement
 
             eps_p1 = P / (self.Ep * Ap)
             eps_p2 = 1 / self.Ec * (P / self.Ab + P * self.e ** 2 / self.I)
-            eps_p3 = eps_c * (self.dp / x - 1)
-            Up = Ap * self.Ep * (eps_p1 + eps_p2 + eps_p3)
+            eps_p3 = -eps_c * (self.dp / x - 1)
+            Up = Ap * self.Ep * (eps_p1 + eps_p2 + eps_p3)  # active reinforcement force
 
-            eps_s2 = eps_c * ((self.h - self.recp) / x - 1)
-            Us1 = As1 * self.Es * eps_s2
+            eps_s1 = -eps_c * ((self.ds1 / x) - 1)
+            Us1 = As1 * self.Es * eps_s1  # bottom passive reinforcement force.
 
-            M = Up * self.dp + Us1 * (self.h - self.recp) - Uc * x / 3 - Us2 * (self.recp)
+            M = Up * self.dp + Us1 * self.ds1 + Uc * x / 3 + Us2 * (self.recp)
 
-        Ap_13 = abs(self.aprox(Ap, 98.74))
-        Ap_15 = abs(self.aprox(Ap, 140))
+        phi = 0
+        m = 0
+        for bars in self.bars:
+            m = Ap / self.bars[bars]
+            m = self.aprox(m, 1)
 
-        n_13 = Ap_13 / 98.74
-        n_15 = Ap_15 / 140
+            if (2 * self.recp + m * bars + (m - 1) * 20) > self.b:
+                continue
+            else:
+                phi = bars
+                break
 
+        Act = (self.h - x) * self.b  # tensioned area
+        S = 0.25 * self.fctm / 4.8 * Act / Ap * m * phi
+        w_k = S * (eps_p3 - 0.00103)
 
-        Act = (self.h - x) * self.b
-        # S = 0.25 * self.fctm / 4.8 * Act *
-        return x, n
+        if w_k < 0.2:
+            return False
+        else:
+            return True
+
 
     def instantLosses(self, P, Ap):  # nu and gamma are the frictión coefficient and involuntary curvature respectively
         delta_Pfric = P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l ** 2 + self.gamma)))  # Friction losses
@@ -266,7 +288,7 @@ class posTensionedIsoBeam:
         instantLosses = delta_Pfric + delta_shortConcrete + delta_Pjack
         return instantLosses
 
-    def timedepLosses(self, P, Ap, homoarea, homoy, homoinertia):
+    def timedepLosses(self, P, Ap, areahomo, depthhomo, inertiahomo):
 
         M = self.Me
         phi = 2
@@ -293,7 +315,7 @@ class posTensionedIsoBeam:
 
         # calculate stress with Ep*epsp calculate eps with the gross cross section and multiply by 2,9 to account for relaxation
         initial_tension = self.Ep / self.Ec * (
-                - P / homoarea - (P * self.e ** 2 + M * self.e) / homoinertia)
+                - P / areahomo - (P * self.e ** 2 + M * self.e) / inertiahomo)
         initial_tension = abs(initial_tension)
 
         if initial_tension >= .6 * self.fpk:
@@ -307,7 +329,7 @@ class posTensionedIsoBeam:
         sigma_cQp = initial_tension / self.Ep
 
         numerator = Ap * eps_cs * self.Ep + .8 * abs(initial_tension - sigma_pr) + self.Ep / self.Ec * phi * sigma_cQp
-        denominator = 1 + self.Ep * Ap / (self.Ec * self.Ab) * (1 + self.Ab / self.I * homoy ** 2) * (
+        denominator = 1 + self.Ep * Ap / (self.Ec * self.Ab) * (1 + self.Ab / self.I * depthhomo ** 2) * (
                 1 + .8 * phi)
 
         timedepLosses = numerator / denominator
@@ -396,10 +418,11 @@ class reinforcedIsoBeam:
         32: 804.25,
         40: 1256.64
     }
+    length_fraction = 25
 
     def __init__(self, l):
 
-        self.h = l / 25  # first h aproximation
+        self.h = l / self.length_fraction  # first h aproximation
         width = int(self.h * 2 / 150) * 50
         if width < (self.h * 2 / 3):
             self.b = width + 50
@@ -426,8 +449,8 @@ class reinforcedIsoBeam:
 
         self.h = self.Wmin(self.b)[1] + self.rec
 
-        height = int(l / 1250) * 50
-        if height < l / 25:
+        height = int(l / (self.length_fraction * 50)) * 50
+        if height < l / self.length_fraction:
             self.h = height + 50
         else:
             self.h = height
@@ -438,6 +461,18 @@ class reinforcedIsoBeam:
         text = f"IsoRB{self.l / 1000}"
         return text
 
+    @staticmethod
+    def aprox(value, div):
+        """
+        aproximate any continuous value to a set of discrete equally spaced values.
+        :param value: value is the value you want to aproximate to an infinite set of discrete equally spaced values
+        :param div: is the distance between those discrete values
+        :return: the value within the set just above it
+        """
+        a = int(value / div) * div
+        a += div
+
+        return a
     def properties(self):
 
         As = self.As()
@@ -493,10 +528,10 @@ class reinforcedIsoBeam:
         eps_c = -1 * 0.6 * self.fck / self.Ec  # concrete max strain
         Uc = 1 / 2 * eps_c * self.Ec * x * self.b  # Concrete force
 
-        eps_s2 = eps_c * (self.rec / x - 1)
+        eps_s2 = -eps_c * (self.rec / x - 1)
         Us2 = As2 * self.Es * eps_s2  # top reinforcement force
 
-        eps_s1 = eps_c * (self.ds1 / x - 1)  # bottom reinforcement strain
+        eps_s1 = -eps_c * (self.ds1 / x - 1)  # bottom reinforcement strain
         Us1 = As1 * self.Es * eps_s1  # bottom passive reinforcement force.
 
         M = Us1 * self.ds1 + Uc * x / 3 + Us2 * (self.rec)
@@ -505,15 +540,15 @@ class reinforcedIsoBeam:
         # will continue to decrease as active reinforcement strain will continue to grow
         while Uc + Us2 + Us1 < 0 or M < self.Me and n < 100: # while compresion is too high or moment equilibrium is not met.
             n += 1  # Security counter
-            x -= 1  # x is reduced by 5 mm in each round.
+            x -= 5  # x is reduced by 5 mm in each round.
 
             eps_c = -1 * 0.6 * self.fck / self.Ec
             Uc = 1 / 2 * eps_c * x * self.b
 
-            eps_s2 = eps_c * (self.rec / x - 1)
+            eps_s2 = -eps_c * (self.rec / x - 1)
             Us2 = As2 * self.Es * eps_s2
 
-            eps_s1 = eps_c * (self.ds1 / x - 1)
+            eps_s1 = -eps_c * (self.ds1 / x - 1)
             Us1 = As1 * self.Es * eps_s1
 
             M = Us1 * self.ds1 - Uc * x / 3 - Us2 * (self.rec)
@@ -522,29 +557,34 @@ class reinforcedIsoBeam:
         m = 0
         for bar in self.bars:
             m = As1 / self.bars[bar]
+            m = self.aprox(m,1)
 
-            if (2 * self.rec + m * bar + (m - 1) * 20) < self.b:
-                phi = bar
+            if (2 * self.rec + m * bar + (m - 1) * 20) > self.b:
                 continue
-            else: break
+            else:
+                phi = bar
+                break
 
         Act = (self.h - x) * self.b  # tensioned area
         S = 0.25 * self.fctm / 4.8 * Act / As1 * m * phi
-        w_k = S * (eps_s1 - eps_c)
+        w_k = S * (eps_s1 - 0.00103)
 
         if w_k < 0.4:
-            return True
-        else:
             return False
+        else:
+            return True
 
 
 if __name__ == "__main__":
-    # viga = posTensionedIsoBeam(5000)
-    # Pmin = viga.Pmin()
-    # Ap = viga.Ap(Pmin)
-    # As = viga.checkELU(Ap)
-    # print(viga.cracked(Pmin, Ap))
+    viga = posTensionedIsoBeam(5000)
+    Pmin = viga.Pmin()
+    Ap = viga.Ap(Pmin)
+    As = viga.checkELU(Ap)
+    Sh = viga.sectionHomo(Ap,As[0], As[1])
+    Instantalosses = viga.instantLosses(Pmin, Ap)
+    Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
+    print(viga.cracked(Pmin + Instantalosses + Timedeplosses, Ap))
 
-    viga2 = reinforcedIsoBeam(20000)
-    As = viga2.As()
-    print(viga2.cracked(As[0],As[1]))
+    # viga2 = reinforcedIsoBeam(20000)
+    # As = viga2.As()
+    # print(viga2.cracked(As[0],As[1]))
