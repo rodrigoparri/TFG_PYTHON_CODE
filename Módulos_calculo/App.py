@@ -92,8 +92,8 @@ class IsoreinforcedBeam:
 
 
 if __name__ == "__main__":
-    # App = IsopostBeamApp(10000, 1000)
-    # App.Pcal()
+    App = IsopostBeamApp(20000, 1000)
+    App.Pcal()
 
-    App2 = IsoreinforcedBeam(20000, 1000)
-    App2.Rcal()
+    # App2 = IsoreinforcedBeam(20000, 1000)
+    # App2.Rcal()
