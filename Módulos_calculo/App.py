@@ -31,7 +31,6 @@ class IsopostBeamApp:
         # the order in the tuple will be: Pmin, Pmax, Ap, sectionHomo(tuple), instantlosses, timedeplosses, passive reinforcement, cracked.
         beamcalc = dict()
 
-
         for instance in self.PBeams:
 
             b = self.PBeams[instance].b
@@ -46,11 +45,13 @@ class IsopostBeamApp:
             timedeplosses = self.PBeams[instance].timedepLosses(Pmin, Ap, sectionhomo[0], sectionhomo[1], sectionhomo[2])
             reltimedeplosses = timedeplosses / Pmin * 100
             passivereinforcement = self.PBeams[instance].checkELU(Ap)
+            cracked = self.PBeams[instance].cracked(Pmin, Ap, passivereinforcement[0], passivereinforcement[1])
 
-            beamcalc[instance] = (b, h, e, Pmin, Pmax, Ap, instantlosses, relinstlosses, timedeplosses, reltimedeplosses, passivereinforcement)
+            beamcalc[instance] = (b, h, e, Pmin, Pmax, Ap, instantlosses, relinstlosses, timedeplosses, reltimedeplosses,
+                                  passivereinforcement, cracked)
 
         columnnames = ("b (mm)","h (mm)", "e (mm)", "Pmin (N)", "Pmax (N)", "Ap (mm2)", "instant losses (N)","relative instant losses (%)",
-                           "time dependent losses (N)","relative time dependent losses (%)", "passive reinforcement (N)")
+                           "time dependent losses (N)","relative time dependent losses (%)", "passive reinforcement (N)", "Cracked?")
 
         pdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
@@ -93,8 +94,8 @@ class IsoreinforcedBeam:
 
 
 if __name__ == "__main__":
-    # App = IsopostBeamApp(10000, 1000)
-    # App.Pcal()
+    App = IsopostBeamApp(10000, 1000)
+    App.Pcal()
 
     App2 = IsoreinforcedBeam(20000, 1000)
     App2.Rcal()
