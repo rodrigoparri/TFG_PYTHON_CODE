@@ -268,9 +268,9 @@ class posTensionedIsoBeam:
         w_k = S * (eps_p3 - 0.00103)
 
         if w_k < 0.2:
-            return False
+            return "OK"
         else:
-            return True
+            return "NOT OK"
 
 
     def instantLosses(self, P, Ap):  # nu and gamma are the frictión coefficient and involuntary curvature respectively
@@ -474,18 +474,25 @@ class reinforcedIsoBeam:
     def properties(self):
 
         As = self.As()
+        Wmin = self.Wmin(self.b)[0]
+        dmin = self.Wmin(self.b)[1]
+        cracked = self.cracked(As[0], As[1])
+
         return {
             "h mm": self.h,
             "b mm": self.b,
             "Wb cm3":self.Wb,
-            "Wmin cm3":self.Wmin(self.b),
+            "Wmin cm3":Wmin,
+            "dmin mm":dmin,
             "Ib cm4": self.I,
             "self weight kN/m": self.selfweight,
             "char load kN/m": self.charac_load,
             "almost frecuent load": self.almostper_load,
             "Me mkN": self.Me,
             "Mu mKN":self.Mu,
-            "As mm2": As
+            "As1 mm2": As[0],
+            "As2 mm2": As[1],
+            "Cracked": cracked
                 }
 
     def Wmin(self, b=0):  # in this context W means bd^2
@@ -504,7 +511,7 @@ class reinforcedIsoBeam:
         prevAs1 = 0
         prevAs2 = 0
 
-        while self.Mu - M > 0:
+        while self.Mu > M:
             increAs1 = (self.Mu - M) * 1.15 / ((self.h - self.rec) * self.fyk)  # passive reinforcement necessary
             prevAs1 += increAs1
             x = 1.5 * (prevAs1 * self.fyk - prevAs2 * self.fyk) / (1.15 * .8 * self.b * self.fck)   # recalculate neutral fibre.
@@ -543,23 +550,25 @@ class reinforcedIsoBeam:
         Us1 = As1 * self.Es * eps_s1  # bottom passive reinforcement force.
 
         M = Us1 * self.ds1 + Uc * x / 3 + Us2 * (self.rec)
-        n = 0
+
         # so added with its sign while the sum of all the forces is negative. the depth of the compresion block
         # will continue to decrease as active reinforcement strain will continue to grow
-        while Uc + Us2 + Us1 < 0 or M < self.Me: # while compresion is too high or moment equilibrium is not met.
-            n += 1  # Security counter
+        while M < 0 or M < self.Me: # while M is negative or moment equilibrium is not met.
+
             x -= 5  # x is reduced by 5 mm in each round.
 
-            eps_c = -1 * 0.6 * self.fck / self.Ec
-            Uc = 1 / 2 * eps_c * x * self.b
+            if x < 0:
+                return "Equilibrium no found"
+
+            Uc = 1 / 2 * eps_c * self.Ec * x * self.b  # Concrete force
 
             eps_s2 = -eps_c * (self.rec / x - 1)
-            Us2 = As2 * self.Es * eps_s2
+            Us2 = As2 * self.Es * eps_s2  # top reinforcement force
 
-            eps_s1 = -eps_c * (self.ds1 / x - 1)
-            Us1 = As1 * self.Es * eps_s1
+            eps_s1 = -eps_c * (self.ds1 / x - 1)  # bottom reinforcement strain
+            Us1 = As1 * self.Es * eps_s1  # bottom passive reinforcement force.
 
-            M = Us1 * self.ds1 - Uc * x / 3 - Us2 * (self.rec)
+            M = Us1 * self.ds1 + Uc * x / 3 + Us2 * (self.rec)
 
         phi = 0
         m = 0
@@ -578,9 +587,9 @@ class reinforcedIsoBeam:
         w_k = S * (eps_s1 - 0.00103)
 
         if w_k < 0.4:
-            return False, x
+            return "OK", x
         else:
-            return True, x
+            return "NOT OK", x
 
     def instDeflect(self, As, x):
         M_f = self.Wb * self.fctm
@@ -624,6 +633,9 @@ if __name__ == "__main__":
     # Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
     # print(viga.cracked(Pmin + Instantalosses + Timedeplosses, Ap))
 
+    """
+    Podríamos asumir que habiendo cumplido el equilibrio de momentos no hace falta cumplir el equilibrio de fuerzas 
+    """
     viga2 = reinforcedIsoBeam(5000)
     As = viga2.As()
     print(As)

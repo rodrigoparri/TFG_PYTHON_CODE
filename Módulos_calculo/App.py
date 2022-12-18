@@ -51,7 +51,7 @@ class IsopostBeamApp:
                                   passivereinforcement, cracked)
 
         columnnames = ("b (mm)","h (mm)", "e (mm)", "Pmin (N)", "Pmax (N)", "Ap (mm2)", "instant losses (N)","relative instant losses (%)",
-                           "time dependent losses (N)","relative time dependent losses (%)", "passive reinforcement (mm2)", "Cracked?")
+                           "time dependent losses (N)","relative time dependent losses (%)", "passive reinforcement (mm2)", "Cracked")
 
         pdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
@@ -82,18 +82,27 @@ class IsoreinforcedBeam:
 
             b = self.RBeams[instance].b
             h = self.RBeams[instance].h
+            Me = self.RBeams[instance].Me * 1e-6
+            Mu = self.RBeams[instance].Mu * 1e-6
             As = self.RBeams[instance].As()
             cracked = self.RBeams[instance].cracked(As[0], As[1])
+            instdeflect = self.RBeams[instance].instDeflect(As[0], cracked[1])
+            timedepflect = self.RBeams[instance].timedepDeflect(instdeflect, As[1])
+            checkdeflect = self.RBeams[instance].checkDefelct(instdeflect, timedepflect)
 
-            beamcalc[instance] = (b, h, As, cracked)
+            beamcalc[instance] = (b, h, Me, Mu, As[0], As[1], cracked[0], cracked[1], checkdeflect)
 
-        columnnames = ("b (mm)", "h (mm)", "As (mm2)", "Cracked?")
+        columnnames = ("b (mm)", "h (mm)", "Me (mkN)", "Mu (mkN)", "As1 (mm2)", "As2 (mm2)", "Cracked", "x cracked", "Deflect")
         rdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
         print(rdf)
 
 
 if __name__ == "__main__":
+    """ 
+    hay algún problema con la fisuración en ambas vigas, a mayor canto se produce mayor fisuración lo que parece
+    sin sentido. 
+    """
 
     # App = IsopostBeamApp(10000, 1000)
     # App.Pcal()
