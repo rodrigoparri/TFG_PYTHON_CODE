@@ -152,9 +152,7 @@ class posTensionedIsoBeam:
         """
         a = int(value / div) * div
         a += div
-
         return a
-
 
     def hflex(self):  # COMPROBAR QUE LA SALIDA DE HFLEX ES IGUAL A LAS H Y B ELEGIDAS SI SON MAYORES PONER LAS DE HFLEX.
         # finder of the minimum heigh of the beam with b = 2h/3 that has a maximum deflection of l/400
@@ -162,7 +160,6 @@ class posTensionedIsoBeam:
         b = 2 / 3 * h
         h = self.aprox(h, 50)
         b = self.aprox(b, 50)
-
         return h, b
 
     def Iflex(self):
@@ -196,9 +193,9 @@ class posTensionedIsoBeam:
         # As1 and As2 are the bottom and top passive reinforcement areas
         np = self.Ep / self.Ec
         ns = self.Es / self.Ec
-        Ah = self.b * self.h + (np - 1) * Ap  # homogeneous cross section
+        Ah = self.b * self.h + (np - 1) * Ap + (ns - 1) * (As1 + As2)  # homogeneous cross section
         # position of the centroid from top fibre
-        y = (self.h / 2 * (self.h * self.b) + self.dp * (ns - 1) * Ap + d1 * (ns - 1) * As1 + d2 * (ns - 1) + As2) / Ah
+        y = (self.h / 2 * (self.h * self.b) + self.dp * (ns - 1) * Ap + d1 * (ns - 1) * As1 + d2 * (ns - 1) * As2) / Ah
         Ih = self.b * self.h ** 3 / 12 + Ap * (np - 1) * self.dp ** 2 + d1 ** 2 * (ns - 1) * As1 + d2 ** 2 * (
                     ns - 1) * As2
         return Ah, y, Ih  # Homogenized cross section, neutral plane, depth homogenized inertia.
@@ -348,14 +345,15 @@ class posTensionedIsoBeam:
                 break
         return Apout
 
-    def checkInstDeflect(self, Ap, EqLoad, inertiahomo):  # checking max isostatic deflection
-        deflection = 5 / 384 * (self.frec_full_load - EqLoad) * self.l ** 3 / (self.Ec * inertiahomo)
+    def instDeflect(self, EqLoad, inertiahomo):  # checking max isostatic deflection
+        deflection = 5 / 384 * (self.frec_full_load - EqLoad) * pow(self.l, 4) / (self.Ec * inertiahomo)
+        return deflection
 
-        if deflection < self.l / 400:
-            return True, deflection  # a true value stands for a correct deflection
-        else:
-            return False, deflection  # a false value stands for an incorrect deflection
+    def timedepDeflect(self):
+        pass
 
+    def checkDeflect(self):
+        pass
     def checkELU(self, Ap, As1=0, As2=0):
 
         prevAs1 = As1  # this variables will only be used if M_front < Mu
@@ -471,8 +469,8 @@ class reinforcedIsoBeam:
         """
         a = int(value / div) * div
         a += div
-
         return a
+
     def properties(self):
 
         As = self.As()
@@ -520,6 +518,16 @@ class reinforcedIsoBeam:
 
         return prevAs1, prevAs2
 
+    def sectionHomo(self, As1=0, d1=0, As2=0, d2=0):
+        # As1 and As2 are the bottom and top passive reinforcement areas
+        ns = self.Es / self.Ec
+        Ah = self.b * self.h + (ns - 1) * (As1 + As2)  # homogeneous cross section
+        # position of the centroid from top fibre
+        y = (self.h / 2 * (self.h * self.b) + d1 * (ns - 1) * As1 + d2 * (ns - 1) * As2) / Ah
+        Ih = self.b * self.h ** 3 / 12 + d1 ** 2 * (ns - 1) * As1 + d2 ** 2 * (
+                    ns - 1) * As2
+        return Ah, y, Ih  # Homogenized cross section, neutral plane, depth homogenized inertia.
+
     def cracked(self, As1, As2):
 
         x = self.h  # stablish x=dp to start iterating until an equilibrium solution is found.
@@ -538,7 +546,7 @@ class reinforcedIsoBeam:
         n = 0
         # so added with its sign while the sum of all the forces is negative. the depth of the compresion block
         # will continue to decrease as active reinforcement strain will continue to grow
-        while Uc + Us2 + Us1 < 0 or M < self.Me and n < 100: # while compresion is too high or moment equilibrium is not met.
+        while Uc + Us2 + Us1 < 0 or M < self.Me: # while compresion is too high or moment equilibrium is not met.
             n += 1  # Security counter
             x -= 5  # x is reduced by 5 mm in each round.
 
@@ -570,21 +578,54 @@ class reinforcedIsoBeam:
         w_k = S * (eps_s1 - 0.00103)
 
         if w_k < 0.4:
-            return False
+            return False, x
         else:
-            return True
+            return True, x
+
+    def instDeflect(self, As, x):
+        M_f = self.Wb * self.fctm
+        n = self.Ec / self.Es
+        I_f = self.b * pow(x, 3) / 3 + As * (n - 1) * (self.ds1 - x)
+        a = (M_f / self.Me) ** 3
+        I_e = a * self.I + (1 + a) * I_f
+
+        if I_e > self.I:
+            I_e = self.I
+
+        deflection = 5 / 384 * self.almostper_load * pow(self.l, 4) / (I_e * self.Ec)
+
+        return deflection
+
+    def timedepDeflect(self, instdeflect, As):
+        rho_ = As / self.Ab
+        lmda = 2 / (1 + 50 * rho_)
+        timedepdeflect = instdeflect * lmda
+
+        return timedepdeflect
+
+    def checkDefelct(self, instdeflect, timedepdeflect):
+        totaldeflect = instdeflect + timedepdeflect
+
+        if totaldeflect < self.l / 400:
+            return "OK"
+        else:
+            return "NOT OK"
+
+
 
 
 if __name__ == "__main__":
-    viga = posTensionedIsoBeam(5000)
-    Pmin = viga.Pmin()
-    Ap = viga.Ap(Pmin)
-    As = viga.checkELU(Ap)
-    Sh = viga.sectionHomo(Ap,As[0], As[1])
-    Instantalosses = viga.instantLosses(Pmin, Ap)
-    Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
-    print(viga.cracked(Pmin + Instantalosses + Timedeplosses, Ap))
+    # viga = posTensionedIsoBeam(5000)
+    # Pmin = viga.Pmin()
+    # Ap = viga.Ap(Pmin)
+    # As = viga.checkELU(Ap)
+    # Sh = viga.sectionHomo(Ap,As[0], As[1])
+    # Instantalosses = viga.instantLosses(Pmin, Ap)
+    # Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
+    # print(viga.cracked(Pmin + Instantalosses + Timedeplosses, Ap))
 
-    # viga2 = reinforcedIsoBeam(20000)
-    # As = viga2.As()
-    # print(viga2.cracked(As[0],As[1]))
+    viga2 = reinforcedIsoBeam(5000)
+    As = viga2.As()
+    print(As)
+    print(viga2.h)
+    print(viga2.cracked(As[0],As[1]))

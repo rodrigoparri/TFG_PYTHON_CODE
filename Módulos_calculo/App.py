@@ -51,7 +51,7 @@ class IsopostBeamApp:
                                   passivereinforcement, cracked)
 
         columnnames = ("b (mm)","h (mm)", "e (mm)", "Pmin (N)", "Pmax (N)", "Ap (mm2)", "instant losses (N)","relative instant losses (%)",
-                           "time dependent losses (N)","relative time dependent losses (%)", "passive reinforcement (N)", "Cracked?")
+                           "time dependent losses (N)","relative time dependent losses (%)", "passive reinforcement (mm2)", "Cracked?")
 
         pdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
@@ -95,8 +95,8 @@ class IsoreinforcedBeam:
 
 if __name__ == "__main__":
 
-    App = IsopostBeamApp(10000, 1000)
-    App.Pcal()
+    # App = IsopostBeamApp(10000, 1000)
+    # App.Pcal()
 
-    # App2 = IsoreinforcedBeam(20000, 1000)
-    # App2.Rcal()
+    App2 = IsoreinforcedBeam(25000, 1000)
+    App2.Rcal()
