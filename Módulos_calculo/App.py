@@ -85,14 +85,15 @@ class IsoreinforcedBeam:
             Me = self.RBeams[instance].Me * 1e-6
             Mu = self.RBeams[instance].Mu * 1e-6
             As = self.RBeams[instance].As()
-            cracked = self.RBeams[instance].cracked(As[0], As[1])
+            cracked = self.RBeams[instance].cracked(As[0], As[1])  # might delete it
+            CEcracked = self.RBeams[instance].CEcrack(As[0], As[1])
             instdeflect = self.RBeams[instance].instDeflect(As[0], cracked[1])
             timedepflect = self.RBeams[instance].timedepDeflect(instdeflect, As[1])
             checkdeflect = self.RBeams[instance].checkDefelct(instdeflect, timedepflect)
 
-            beamcalc[instance] = (b, h, Me, Mu, As[0], As[1], cracked[0], cracked[1], checkdeflect)
+            beamcalc[instance] = (b, h, Me, Mu, As[0], As[1], cracked[0], cracked[1], CEcracked, checkdeflect)
 
-        columnnames = ("b (mm)", "h (mm)", "Me (mkN)", "Mu (mkN)", "As1 (mm2)", "As2 (mm2)", "Cracked", "x cracked", "Deflect")
+        columnnames = ("b (mm)", "h (mm)", "Me (mkN)", "Mu (mkN)", "As1 (mm2)", "As2 (mm2)", "Cracked", "x cracked", "CEcracked", "Deflect")
         rdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
         print(rdf)

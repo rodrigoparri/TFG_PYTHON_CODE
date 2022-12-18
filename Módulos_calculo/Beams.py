@@ -416,7 +416,7 @@ class reinforcedIsoBeam:
         32: 804.25,
         40: 1256.64
     }
-    length_fraction = 25
+    length_fraction = 18
 
     def __init__(self, l):
 
@@ -591,6 +591,60 @@ class reinforcedIsoBeam:
         else:
             return "NOT OK", x
 
+    def CEcrack(self, As1, As2):
+        phi = 0
+        m = 0
+        for bar in self.bars:
+            m = As1 / self.bars[bar]
+            m = self.aprox(m, 1)
+
+            if (2 * self.rec + m * bar + (m - 1) * 20) > self.b:
+                continue
+            else:
+                phi = bar
+                break
+
+        # Xi_1 = math.sqrt(0.5)
+        h_Cr = (2.5 * self.rec, self.h / 2, (0.65 * self.h + 0.35 * self.rec) / 3)
+        A_ceff = self.b * min(h_Cr)
+        rho_peff = (As1)/ A_ceff
+        s_r = 3.4 * self.rec + 0.8 * 0.5 * 0.425 * phi / rho_peff
+
+        if phi == 6:
+            sigma_s = 450
+        elif phi == 8:
+            sigma_s = 400
+        elif phi == 10:
+            sigma_s = 360
+        elif phi == 12:
+            sigma_s = 320
+        elif phi == 14:
+            sigma_s = 280
+        elif phi == 16:
+            sigma_s = 280
+        elif phi == 20:
+            sigma_s = 240
+        elif phi == 25:
+            sigma_s = 200
+        elif phi == 32:
+            sigma_s = 200
+        else:
+            sigma_s = 160
+
+        alpha_e = self.Es / self.Ec
+        diff_eps = (sigma_s - 0.4 * self.fctm / rho_peff * (1 + alpha_e * rho_peff)) / self.Es
+        lim = 0.6 * sigma_s / self.Es
+
+        if diff_eps < lim:
+            diff_eps = lim
+
+        w_k = s_r * diff_eps
+
+        if w_k < 0.4:
+            return "OK"
+        else:
+            return "NOT OK"
+
     def instDeflect(self, As, x):
         M_f = self.Wb * self.fctm
         n = self.Ec / self.Es
@@ -636,8 +690,9 @@ if __name__ == "__main__":
     """
     Podríamos asumir que habiendo cumplido el equilibrio de momentos no hace falta cumplir el equilibrio de fuerzas 
     """
-    viga2 = reinforcedIsoBeam(5000)
+    viga2 = reinforcedIsoBeam(20000)
     As = viga2.As()
     print(As)
-    print(viga2.h)
-    print(viga2.cracked(As[0],As[1]))
+    # print(viga2.h)
+    # print(viga2.cracked(As[0],As[1]))
+    print(viga2.CEcrack(As[0], As[1]))
