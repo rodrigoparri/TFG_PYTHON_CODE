@@ -467,23 +467,29 @@ class reinforcedIsoBeam:
         32: 804.25,
         40: 1256.64
     }
-    length_fraction = 18
+    length_fraction = 19
 
     def __init__(self, l):
 
-        self.h = l / self.length_fraction  # first h aproximation
-        width = int(self.h * 2 / 150) * 50
-        if width < (self.h * 2 / 3):
+        height = l / self.length_fraction  # first h aproximation
+        haprox = int(height / 50) * 50
+        if haprox < height:
+            height = haprox + 50
+        else:
+            height = haprox
+
+        width = int(height * 2 / 150) * 50
+        if width < (height * 2 / 3):
             self.b = width + 50
         else:
             self.b = width
 
         self.l = l
 
-        self.Ab = self.h * self.b  # gross cross section
-        self.Wb = self.h ** 2 * self.b / 6  # gross section modulus
-        self.Wu = self.b * (self.h - self.rec) ** 2
-        self.I = self.b * self.h ** 3 / 12  # gross moment of inertia
+        self.Ab = height * self.b  # gross cross section
+        self.Wb = height ** 2 * self.b / 6  # gross section modulus
+        self.Wu = self.b * (height - self.rec) ** 2
+        self.I = self.b * height ** 3 / 12  # gross moment of inertia
         self.selfweight = self.Ab * 24 * 1e-6
 
         if self.l >= 7000:
@@ -496,11 +502,11 @@ class reinforcedIsoBeam:
         self.Me = self.almostper_load * self.l ** 2 / 8  # Max moment under almost permanent loads
         self.Mu = self.charac_load * self.l ** 2 / 8  # Max moment under characteristic load.
 
-        self.h = self.Wmin(self.b)[1] + self.rec
+        hmin = self.Wmin(self.b)[1] + self.rec
 
-        height = int(l / (self.length_fraction * 50)) * 50
-        if height < l / self.length_fraction:
-            self.h = height + 50
+        if height < hmin:
+
+            self.h = self.aprox(height,50)
         else:
             self.h = height
 
@@ -572,7 +578,7 @@ class reinforcedIsoBeam:
                 # the current As1 and the previous value for As1.
                 prevAs2 += increAs2
 
-            M = prevAs1 * self.fyk / 1.15 * (self.h - self.rec) - prevAs2 * self.fyk / 1.15 * self.rec - 0.32 * x ** 2 * self.b * self.fck / 1.5
+            M = prevAs1 * self.fyk / 1.15 * self.ds1 - prevAs2 * self.fyk / 1.15 * self.rec - 0.32 * x ** 2 * self.b * self.fck / 1.5
 
         return prevAs1, prevAs2
 
@@ -696,6 +702,55 @@ class reinforcedIsoBeam:
         else:
             return "NOT OK"
 
+    def CEdeflect(self, As1, As2, inertiahomo):
+        rho = As1 / self.Ab
+        rho_ = As2 / self.Ab
+        rho_0 = 1e-3 * math.sqrt(self.fck)
+        a = rho_0 / rho
+        b = rho_0 / (rho - rho_)
+        K = 1
+        ld = 0
+        ld_0 = self.l / self.ds1
+
+        if rho <= rho_0:
+            ld = K * (11 + 1.5 * math.sqrt(self.fck) * a + 3.2 * math.sqrt(self.fck) * pow(a - 1, 3 / 2))
+        else:
+            ld = K * (11 + 1.5 * math.sqrt(self.fck) * b + 1 / 12 * math.sqrt(self.fck * rho_ / rho_0))
+
+        if ld_0 <= ld:
+            return "OKi"
+        else:
+            n = self.Es / self.Ec
+            m = rho_ / rho
+            xd = n * rho * (1 + m) * (
+                -1 + math.sqrt(1 + 2 * (1 + m * self.rec / self.ds1) / (
+                n * rho * (1 + m) ** 2 ))) # Cracked inertia from centroid
+
+            x = xd * self.ds1
+            I_f = n * As1 * (self.ds1 - x) * (self.ds1 - x / 3) + n * As2 * (
+                x - self.rec) * (x / 3 - self.rec )
+
+            Eceff = self.Ec / (1 + self.Phi)
+            Mf = self.Wb * self.fctm
+            Xi = 1 - 0.5 * (Mf / self.Me) ** 2
+            ke = self.Me / (Eceff * inertiahomo)
+            kf = self.Me / (Eceff * I_f)
+            k = Xi * kf + (1 - Xi) * ke
+
+            deflection = k * 5 / 48 * self.l ** 2
+
+            if deflection < self.l / 400:
+                return "OK"
+            else:
+                return "NOT OK"
+
+
+
+
+
+
+
+
     def instDeflect(self, As, x):
         M_f = self.Wb * self.fctm
         n = self.Ec / self.Es
@@ -729,22 +784,23 @@ class reinforcedIsoBeam:
 
 
 if __name__ == "__main__":
-    viga = posTensionedIsoBeam(10000)
-    Pmin = viga.Pmin()
-    Ap = viga.Ap(Pmin)
-    As = viga.checkELU(Ap)
-    Sh = viga.sectionHomo(Ap,As[0], As[1])
-    Instantalosses = viga.instantLosses(Pmin, Ap)
-    Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
-    print(viga.CEcrack(Pmin + Instantalosses + Timedeplosses, Ap,As[0], As[1]))
+    # viga = posTensionedIsoBeam(10000)
+    # Pmin = viga.Pmin()
+    # Ap = viga.Ap(Pmin)
+    # As = viga.checkELU(Ap)
+    # Sh = viga.sectionHomo(Ap,As[0], As[1])
+    # Instantalosses = viga.instantLosses(Pmin, Ap)
+    # Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
+    # print(viga.CEcrack(Pmin + Instantalosses + Timedeplosses, Ap,As[0], As[1]))
     # print(viga.cracked(Pmin + Instantalosses + Timedeplosses, Ap))
 
     """
     Podríamos asumir que habiendo cumplido el equilibrio de momentos no hace falta cumplir el equilibrio de fuerzas 
     """
-    # viga2 = reinforcedIsoBeam(20000)
-    # As = viga2.As()
+    viga2 = reinforcedIsoBeam(10000)
+    As = viga2.As()
     # print(As)
     # # print(viga2.h)
     # # print(viga2.cracked(As[0],As[1]))
-    # print(viga2.CEcrack(As[0], As[1]))
+    sectionhomo = viga2.sectionHomo(As[0], As[1])
+    print(viga2.CEdeflect(As[0], As[1], sectionhomo[2]))

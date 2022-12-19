@@ -45,13 +45,15 @@ class IsopostBeamApp:
             timedeplosses = self.PBeams[instance].timedepLosses(Pmin, Ap, sectionhomo[0], sectionhomo[1], sectionhomo[2])
             reltimedeplosses = timedeplosses / Pmin * 100
             passivereinforcement = self.PBeams[instance].checkELU(Ap)
-            cracked = self.PBeams[instance].cracked(Pmin, Ap, passivereinforcement[0], passivereinforcement[1])
+            As1 = passivereinforcement[0]
+            As2 = passivereinforcement[1]
+            cracked = self.PBeams[instance].CEcrack(Pmin, Ap, passivereinforcement[0], passivereinforcement[1])
 
             beamcalc[instance] = (b, h, e, Pmin, Pmax, Ap, instantlosses, relinstlosses, timedeplosses, reltimedeplosses,
-                                  passivereinforcement, cracked)
+                                  As1, As2, cracked)
 
-        columnnames = ("b (mm)","h (mm)", "e (mm)", "Pmin (N)", "Pmax (N)", "Ap (mm2)", "instant losses (N)","relative instant losses (%)",
-                           "time dependent losses (N)","relative time dependent losses (%)", "passive reinforcement (mm2)", "Cracked")
+        columnnames = ("b (mm)","h (mm)", "e (mm)", "Pmin (N)", "Pmax (N)", "Ap (mm2)", "instant losses (N)"," (%)",
+                           "time dependent losses (N)"," (%)", "As1 (mm2)", "As2 (mm2)", "Cracked")
 
         pdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
@@ -85,15 +87,14 @@ class IsoreinforcedBeam:
             Me = self.RBeams[instance].Me * 1e-6
             Mu = self.RBeams[instance].Mu * 1e-6
             As = self.RBeams[instance].As()
-            cracked = self.RBeams[instance].cracked(As[0], As[1])  # might delete it
+            secthomo = self.RBeams[instance].sectionHomo(As[0], As[1])
             CEcracked = self.RBeams[instance].CEcrack(As[0], As[1])
-            instdeflect = self.RBeams[instance].instDeflect(As[0], cracked[1])
-            timedepflect = self.RBeams[instance].timedepDeflect(instdeflect, As[1])
-            checkdeflect = self.RBeams[instance].checkDefelct(instdeflect, timedepflect)
+            CEdeflect = self.RBeams[instance].CEdeflect(As[0], As[1],secthomo[2])
 
-            beamcalc[instance] = (b, h, Me, Mu, As[0], As[1], cracked[0], cracked[1], CEcracked, checkdeflect)
+            beamcalc[instance] = (b, h, Me, Mu, As[0], As[1], CEcracked, CEdeflect)
 
-        columnnames = ("b (mm)", "h (mm)", "Me (mkN)", "Mu (mkN)", "As1 (mm2)", "As2 (mm2)", "Cracked", "x cracked", "CEcracked", "Deflect")
+        columnnames = ("b (mm)", "h (mm)", "Me (mkN)", "Mu (mkN)", "As1 (mm2)",
+                       "As2 (mm2)", "CEcracked", "CEdeflection")
         rdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
         print(rdf)
@@ -105,7 +106,7 @@ if __name__ == "__main__":
     sin sentido. 
     """
 
-    # App = IsopostBeamApp(10000, 1000)
+    # App = IsopostBeamApp(25000, 1000)
     # App.Pcal()
 
     App2 = IsoreinforcedBeam(25000, 1000)
