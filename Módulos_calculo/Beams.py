@@ -272,6 +272,57 @@ class posTensionedIsoBeam:
         else:
             return "NOT OK"
 
+    def CEcrack(self, P, Ap, As1, As2):
+        phi = 0
+        m = 0
+        for bar in self.bars:
+            m = As1 / self.bars[bar]
+            m = self.aprox(m, 1)
+
+            if (2 * self.recp + m * bar + (m - 1) * 20) > self.b:
+                continue
+            else:
+                phi = bar
+                break
+
+        phi_p = 0
+        Ap_list = []
+        for tendom in self.tendoms:
+            t = Ap / self.tendoms[tendom]
+            t = self.aprox(t, 1)
+            a = (t * self.tendoms[tendom] - Ap)
+            Ap_list.append(a)
+
+        if Ap_list[0] <= Ap_list[1]:
+            phi_p = 12.7
+        elif Ap_list[0] > Ap_list[1]:
+            phi_p = 15.2
+
+        Xi_1 = math.sqrt(0.5 * phi / phi_p)
+        h_Cr = min(2.5 * self.reca, self.h / 2, (0.65 * self.h + 0.35 * self.reca) / 3)
+        A_ceff = self.b * h_Cr
+        rho_peff = (As1 + Xi_1 * Ap) / A_ceff
+        s_r = 3.4 * self.reca + 1.6 * 0.5 * 0.425 * phi / rho_peff
+
+        eps_c = -1 * 0.6 * self.fck / self.Ec
+        # eps_p1 = P / (self.Ep * Ap)
+        # eps_p2 = 1 / self.Ec * (P / self.Ab + P * self.e ** 2 / self.I)
+        eps_p3 = -eps_c * (self.dp / (self.h - h_Cr) - 1)
+        sigma_s = self.Ep * eps_p3
+
+        alpha_e = self.Ep / self.Ec
+        diff_eps = (sigma_s - 0.4 * self.fctm / rho_peff * (1 + alpha_e * rho_peff)) / self.Es
+        lim = 0.6 * sigma_s / self.Es
+
+        if diff_eps < lim:
+            diff_eps = lim
+
+        w_k = s_r * diff_eps
+
+        if w_k < 0.2:
+            return "OK"
+        else:
+            return "NOT OK"
 
     def instantLosses(self, P, Ap):  # nu and gamma are the frictión coefficient and involuntary curvature respectively
         delta_Pfric = P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l ** 2 + self.gamma)))  # Friction losses
@@ -678,21 +729,22 @@ class reinforcedIsoBeam:
 
 
 if __name__ == "__main__":
-    # viga = posTensionedIsoBeam(5000)
-    # Pmin = viga.Pmin()
-    # Ap = viga.Ap(Pmin)
-    # As = viga.checkELU(Ap)
-    # Sh = viga.sectionHomo(Ap,As[0], As[1])
-    # Instantalosses = viga.instantLosses(Pmin, Ap)
-    # Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
+    viga = posTensionedIsoBeam(10000)
+    Pmin = viga.Pmin()
+    Ap = viga.Ap(Pmin)
+    As = viga.checkELU(Ap)
+    Sh = viga.sectionHomo(Ap,As[0], As[1])
+    Instantalosses = viga.instantLosses(Pmin, Ap)
+    Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
+    print(viga.CEcrack(Pmin + Instantalosses + Timedeplosses, Ap,As[0], As[1]))
     # print(viga.cracked(Pmin + Instantalosses + Timedeplosses, Ap))
 
     """
     Podríamos asumir que habiendo cumplido el equilibrio de momentos no hace falta cumplir el equilibrio de fuerzas 
     """
-    viga2 = reinforcedIsoBeam(20000)
-    As = viga2.As()
-    print(As)
-    # print(viga2.h)
-    # print(viga2.cracked(As[0],As[1]))
-    print(viga2.CEcrack(As[0], As[1]))
+    # viga2 = reinforcedIsoBeam(20000)
+    # As = viga2.As()
+    # print(As)
+    # # print(viga2.h)
+    # # print(viga2.cracked(As[0],As[1]))
+    # print(viga2.CEcrack(As[0], As[1]))
