@@ -592,61 +592,6 @@ class reinforcedIsoBeam:
                     ns - 1) * As2
         return Ah, y, Ih  # Homogenized cross section, neutral plane, depth homogenized inertia.
 
-    def cracked(self, As1, As2):
-
-        x = self.h  # stablish x=dp to start iterating until an equilibrium solution is found.
-
-        # first of all we need to check for equilibrium of forces in order to calculate the depth of the neutral fibre
-        eps_c = -1 * 0.6 * self.fck / self.Ec  # concrete max strain
-        Uc = 1 / 2 * eps_c * self.Ec * x * self.b  # Concrete force
-
-        eps_s2 = -eps_c * (self.rec / x - 1)
-        Us2 = As2 * self.Es * eps_s2  # top reinforcement force
-
-        eps_s1 = -eps_c * (self.ds1 / x - 1)  # bottom reinforcement strain
-        Us1 = As1 * self.Es * eps_s1  # bottom passive reinforcement force.
-
-        M = Us1 * self.ds1 + Uc * x / 3 + Us2 * (self.rec)
-
-        # so added with its sign while the sum of all the forces is negative. the depth of the compresion block
-        # will continue to decrease as active reinforcement strain will continue to grow
-        while M < 0 or M < self.Me: # while M is negative or moment equilibrium is not met.
-
-            x -= 5  # x is reduced by 5 mm in each round.
-
-            if x < 0:
-                return "Equilibrium no found"
-
-            Uc = 1 / 2 * eps_c * self.Ec * x * self.b  # Concrete force
-
-            eps_s2 = -eps_c * (self.rec / x - 1)
-            Us2 = As2 * self.Es * eps_s2  # top reinforcement force
-
-            eps_s1 = -eps_c * (self.ds1 / x - 1)  # bottom reinforcement strain
-            Us1 = As1 * self.Es * eps_s1  # bottom passive reinforcement force.
-
-            M = Us1 * self.ds1 + Uc * x / 3 + Us2 * (self.rec)
-
-        phi = 0
-        m = 0
-        for bar in self.bars:
-            m = As1 / self.bars[bar]
-            m = self.aprox(m,1)
-
-            if (2 * self.rec + m * bar + (m - 1) * 20) > self.b:
-                continue
-            else:
-                phi = bar
-                break
-
-        Act = (self.h - x) * self.b  # tensioned area
-        S = 0.25 * self.fctm / 4.8 * Act / As1 * m * phi
-        w_k = S * (eps_s1 - 0.00103)
-
-        if w_k < 0.4:
-            return "OK", x
-        else:
-            return "NOT OK", x
 
     def CEcrack(self, As1, As2):
         phi = 0
@@ -744,41 +689,6 @@ class reinforcedIsoBeam:
             else:
                 return "NOT OK"
 
-
-
-
-
-
-
-
-    def instDeflect(self, As, x):
-        M_f = self.Wb * self.fctm
-        n = self.Ec / self.Es
-        I_f = self.b * pow(x, 3) / 3 + As * (n - 1) * (self.ds1 - x)
-        a = (M_f / self.Me) ** 3
-        I_e = a * self.I + (1 + a) * I_f
-
-        if I_e > self.I:
-            I_e = self.I
-
-        deflection = 5 / 384 * self.almostper_load * pow(self.l, 4) / (I_e * self.Ec)
-
-        return deflection
-
-    def timedepDeflect(self, instdeflect, As):
-        rho_ = As / self.Ab
-        lmda = 2 / (1 + 50 * rho_)
-        timedepdeflect = instdeflect * lmda
-
-        return timedepdeflect
-
-    def checkDefelct(self, instdeflect, timedepdeflect):
-        totaldeflect = instdeflect + timedepdeflect
-
-        if totaldeflect < self.l / 400:
-            return "OK"
-        else:
-            return "NOT OK"
 
 
 
