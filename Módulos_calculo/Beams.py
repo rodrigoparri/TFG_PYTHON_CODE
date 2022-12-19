@@ -454,7 +454,7 @@ class reinforcedIsoBeam:
         As = self.As()
         Wmin = self.Wmin(self.b)[0]
         dmin = self.Wmin(self.b)[1]
-        cracked = self.cracked(As[0], As[1])
+        CEcrack = self.CEcrack(As[0], As[1])
 
         return {
             "h mm": self.h,
@@ -470,7 +470,7 @@ class reinforcedIsoBeam:
             "Mu mKN":self.Mu,
             "As1 mm2": As[0],
             "As2 mm2": As[1],
-            "Cracked": cracked
+            "Cracked": CEcrack
                 }
 
     def Wmin(self, b=0):  # in this context W means bd^2
