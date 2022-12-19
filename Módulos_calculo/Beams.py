@@ -200,77 +200,6 @@ class posTensionedIsoBeam:
                     ns - 1) * As2
         return Ah, y, Ih  # Homogenized cross section, neutral plane, depth homogenized inertia.
 
-    def cracked(self, P, Ap, As1=0, As2=0, Dp=0, Ds1=0, Ds2=0): # D=diameter. is convenient to use P after all losses have been applied.
-
-        # tau_bms1 = 7.84 - .12 * Ds1  # transmision stress for passive reinforcement
-        # tau_bms2 = 7.84 - .12 * Ds2
-
-        x = self.h  # stablish x=dp to start iterating until an equilibrium solution is found.
-
-        # first of all we need to check for equilibrium of forces in order to calculate the depth of the neutral fibre
-        eps_c = -1 * 0.6 * self.fck / self.Ec # concrete max strain
-        Uc = 1 / 2 * eps_c * self.Ec * x * self.b  # Concrete force
-
-        eps_s2 = -eps_c * (self.recp / x - 1)
-        Us2 = As2 * self.Es * eps_s2  # top reinforcement force
-
-        # strain components of the active reinforcement
-
-        eps_p1 = P / (self.Ep * Ap)
-        eps_p2 = 1 / self.Ec * (P / self.Ab + P * self.e ** 2 / self.I)
-        eps_p3 = -eps_c * (self.dp / x - 1)
-        Up = Ap * self.Ep * (eps_p1 + eps_p2 + eps_p3)  # active reinforcement force
-
-        eps_s1 = -eps_c * ((self.ds1 / x) - 1)
-        Us1 = As1 * self.Es * eps_s1  # bottom passive reinforcement force.
-
-        M = Up * self.dp + Us1 * self.ds1 + Uc * x / 3 + Us2 * (self.recp)
-        n = 0
-        # "Up" might not be big enough to equilibrate the compression forces for the given strain plane.
-        # so added with its sign while the sum of all the forces is negative. the depth of the compresion block
-        # will continue to decrease as active reinforcement strain will continue to grow
-        while Uc + Us2 + Up + Us1 < 0 or M < self.Mf and n < 100: # while compresion is too high or moment equilibrium is not met.
-            n += 1  # Security counter
-            x -= 1  # x is reduced by 5 mm in each round.
-
-            eps_c = -1 * 0.6 * self.fck / self.Ec  # concrete max strain
-            Uc = 1 / 2 * eps_c * self.Ec * x * self.b  # Concrete force
-
-            eps_s2 = -eps_c * (self.recp / x - 1)
-            Us2 = As2 * self.Es * eps_s2  # top reinforcement force
-
-            # strain components of the active reinforcement
-
-            eps_p1 = P / (self.Ep * Ap)
-            eps_p2 = 1 / self.Ec * (P / self.Ab + P * self.e ** 2 / self.I)
-            eps_p3 = -eps_c * (self.dp / x - 1)
-            Up = Ap * self.Ep * (eps_p1 + eps_p2 + eps_p3)  # active reinforcement force
-
-            eps_s1 = -eps_c * ((self.ds1 / x) - 1)
-            Us1 = As1 * self.Es * eps_s1  # bottom passive reinforcement force.
-
-            M = Up * self.dp + Us1 * self.ds1 + Uc * x / 3 + Us2 * (self.recp)
-
-        phi = 0
-        m = 0
-        for bars in self.bars:
-            m = Ap / self.bars[bars]
-            m = self.aprox(m, 1)
-
-            if (2 * self.recp + m * bars + (m - 1) * 20) > self.b:
-                continue
-            else:
-                phi = bars
-                break
-
-        Act = (self.h - x) * self.b  # tensioned area
-        S = 0.25 * self.fctm / 4.8 * Act / Ap * m * phi
-        w_k = S * (eps_p3 - 0.00103)
-
-        if w_k < 0.2:
-            return "OK"
-        else:
-            return "NOT OK"
 
     def CEcrack(self, P, Ap, As1, As2):
         phi = 0
@@ -396,15 +325,7 @@ class posTensionedIsoBeam:
                 break
         return Apout
 
-    def instDeflect(self, EqLoad, inertiahomo):  # checking max isostatic deflection
-        deflection = 5 / 384 * (self.frec_full_load - EqLoad) * pow(self.l, 4) / (self.Ec * inertiahomo)
-        return deflection
 
-    def timedepDeflect(self):
-        pass
-
-    def checkDeflect(self):
-        pass
     def checkELU(self, Ap, As1=0, As2=0):
 
         prevAs1 = As1  # this variables will only be used if M_front < Mu
