@@ -108,6 +108,26 @@ class posTensionedIsoBeam:
         if self.b < self.hflex()[1]:
             self.b = self.hflex()[1]
 
+        ho = self.Ab / (self.h + self.b)
+        kh = 0
+
+        if ho <= 200:
+            kh = 1
+        elif 200 < ho and ho <= 300:
+            kh = 0.85
+        elif 300 < ho and ho <= 500:
+            kh = 0.75
+        elif ho > 500:
+            kh = 0.7
+
+        betha_ds = 23 / (23 * 0.04 * ((ho) ** 3) ** 0.5)
+
+        # eps_cd = kh * betha_ds * self.eps_cd0  # drying strain
+        eps_cd = kh * self.eps_cd0
+        # eps_ca = betha_ds * 2.5 * (self.fck - 10) * (10 ** -6)  # shrinkage strain
+        eps_ca = 2.5 * (self.fck - 10) * (10 ** -6)
+        self.eps_cs = eps_cd + eps_ca  # total shrinkage strain
+
     def __str__(self) -> str:
         text = f"IsoPB{self.l / 1000}"
         return text
@@ -200,7 +220,6 @@ class posTensionedIsoBeam:
                     ns - 1) * As2
         return Ah, y, Ih  # Homogenized cross section, neutral plane, depth homogenized inertia.
 
-
     def CEcrack(self, P, Ap, As1, As2):
         phi = 0
         m = 0
@@ -214,7 +233,7 @@ class posTensionedIsoBeam:
                 phi = bar
                 break
 
-        phi_p = 0
+        phi_w = 0  # wire diameter
         Ap_list = []
         for tendom in self.tendoms:
             t = Ap / self.tendoms[tendom]
@@ -223,11 +242,11 @@ class posTensionedIsoBeam:
             Ap_list.append(a)
 
         if Ap_list[0] <= Ap_list[1]:
-            phi_p = 12.7
+            phi_w = 4.24
         elif Ap_list[0] > Ap_list[1]:
-            phi_p = 15.2
+            phi_w = 5.05
 
-        Xi_1 = math.sqrt(0.5 * phi / phi_p)
+        Xi_1 = math.sqrt(0.5 * phi /(1.75 * phi_w))
         h_Cr = min(2.5 * self.reca, self.h / 2, (0.65 * self.h + 0.35 * self.reca) / 3)
         A_ceff = self.b * h_Cr
         rho_peff = (As1 + Xi_1 * Ap) / A_ceff
@@ -267,32 +286,10 @@ class posTensionedIsoBeam:
 
     def timedepLosses(self, P, Ap, areahomo, depthhomo, inertiahomo):
 
-        M = self.Me
-        phi = 2
-        ho = self.Ab / (self.h + self.b)
-        kh = 0
         relaxation = 0
-
-        if ho <= 200:
-            kh = 1
-        elif 200 < ho and ho <= 300:
-            kh = 0.85
-        elif 300 < ho and ho <= 500:
-            kh = 0.75
-        elif ho > 500:
-            kh = 0.7
-
-        betha_ds = 23 / (23 * 0.04 * ((ho) ** 3) ** 0.5)
-
-        # eps_cd = kh * betha_ds * self.eps_cd0  # drying strain
-        eps_cd = kh * self.eps_cd0
-        # eps_ca = betha_ds * 2.5 * (self.fck - 10) * (10 ** -6)  # shrinkage strain
-        eps_ca = 2.5 * (self.fck - 10) * (10 ** -6)
-        eps_cs = eps_cd + eps_ca  # total shrinkage strain
-
         # calculate stress with Ep*epsp calculate eps with the gross cross section and multiply by 2,9 to account for relaxation
         initial_tension = self.Ep / self.Ec * (
-                - P / areahomo - (P * self.e ** 2 + M * self.e) / inertiahomo)
+                - P / areahomo - (P * self.e ** 2 + self.Me * self.e) / inertiahomo)
         initial_tension = abs(initial_tension)
 
         if initial_tension >= .6 * self.fpk:
@@ -305,9 +302,9 @@ class posTensionedIsoBeam:
         sigma_pr = initial_tension * (1 - 3 * relaxation)
         sigma_cQp = initial_tension / self.Ep
 
-        numerator = Ap * eps_cs * self.Ep + .8 * abs(initial_tension - sigma_pr) + self.Ep / self.Ec * phi * sigma_cQp
+        numerator = Ap * self.eps_cs * self.Ep + .8 * abs(initial_tension - sigma_pr) + self.Ep / self.Ec * self.Phi * sigma_cQp
         denominator = 1 + self.Ep * Ap / (self.Ec * self.Ab) * (1 + self.Ab / self.I * depthhomo ** 2) * (
-                1 + .8 * phi)
+                1 + .8 * self.Phi)
 
         timedepLosses = numerator / denominator
         return timedepLosses
@@ -357,6 +354,62 @@ class posTensionedIsoBeam:
 
         return prevAs1, prevAs2
 
+    def CEdeflect(self, P, Ap, As1, As2, inertiahomo):
+        rho = (As1 + Ap) / self.Ab
+        rho_ = As2 / self.Ab
+        rho_0 = 1e-3 * math.sqrt(self.fck)
+        a = rho_0 / rho
+        b = rho_0 / (rho - rho_)
+        K = 1
+        ld = 0
+        ld_0 = self.l / self.ds1
+        eqL = self.equivalentLoad(P)
+        M = self.Me - eqL * self.l ** 2 / 8
+
+        if rho <= rho_0:
+            ld = K * (11 + 1.5 * math.sqrt(self.fck) * a + 3.2 * math.sqrt(self.fck) * pow(a - 1, 3 / 2))
+        else:
+            ld = K * (11 + 1.5 * math.sqrt(self.fck) * b + 1 / 12 * math.sqrt(self.fck * rho_ / rho_0))
+
+        if ld_0 <= ld:
+            return "OK"
+        else:
+            ns = self.Es / self.Ec
+            np = self.Ep / self.Ec
+            m = rho_ / rho
+
+            # NO CRACKED SECTION IS CONSIDERED
+            # if rho_ != 0:
+            #     xd = np * rho * (1 + m) * (
+            #         -1 + math.sqrt(1 + 2 * (1 + m * self.recp / self.ds1) / (
+            #         np * rho * (1 + m) ** 2 ))) # Cracked inertia from centroid
+            # else:
+            #     xd = np * rho * (-1 + math.sqrt(1 + 2 / (np * rho)))
+
+            # x = xd * self.ds1
+            # I_f = ns * As1 * (self.ds1 - x) * (self.ds1 - x / 3) + ns * As2 * (
+            #     x - self.recp) * (x / 3 - self.recp) + np * Ap * (self.dp - x) * (
+            #     self.dp - x / 3)
+            Qs = As1 * self.h / 2  # reinforcement´s first moment of inertia  from uncracked section´s centroid
+            # Qsf = As1 * (self.ds1 - x)  # reinforcement´s first moment of inertia from cracked section´s centroid
+
+            Eceff = self.Ec / (1 + self.Phi)
+            # Mf = self.Wb * self.fctm
+            # Xi = 1 - 0.5 * (Mf / M) ** 2
+            Xi = 0
+            ke = M / (Eceff * inertiahomo)
+            # kf = M / (Eceff * I_f)
+            kcs = self.eps_cs * np * Qs / self.I
+            # kcsf = self.eps_cs * np * Qsf / I_f
+            # k = Xi * (kf + kcsf) + (1 - Xi) * (ke + kcs)
+            k = (1 - Xi) * (ke + kcs)
+
+            deflection = k * 5 / 48 * self.l ** 2
+
+            if deflection < self.l / 400:
+                return "OK"
+            else:
+                return "NOT OK"
 
 class reinforcedIsoBeam:
     fck = 35
@@ -432,6 +485,27 @@ class reinforcedIsoBeam:
             self.h = height
 
         self.ds1 = self.h - self.rec
+
+        ho = self.Ab / (self.h + self.b)
+        kh = 0
+        relaxation = 0
+
+        if ho <= 200:
+            kh = 1
+        elif 200 < ho and ho <= 300:
+            kh = 0.85
+        elif 300 < ho and ho <= 500:
+            kh = 0.75
+        elif ho > 500:
+            kh = 0.7
+
+        betha_ds = 23 / (23 * 0.04 * ((ho) ** 3) ** 0.5)
+
+        # eps_cd = kh * betha_ds * self.eps_cd0  # drying strain
+        eps_cd = kh * self.eps_cd0
+        # eps_ca = betha_ds * 2.5 * (self.fck - 10) * (10 ** -6)  # shrinkage strain
+        eps_ca = 2.5 * (self.fck - 10) * (10 ** -6)
+        self.eps_cs = eps_cd + eps_ca  # total shrinkage strain
 
     def __str__(self) -> str:
         text = f"IsoRB{self.l / 1000}"
@@ -577,6 +651,7 @@ class reinforcedIsoBeam:
         K = 1
         ld = 0
         ld_0 = self.l / self.ds1
+        alpha_e = self.Es / self.Ec
 
         if rho <= rho_0:
             ld = K * (11 + 1.5 * math.sqrt(self.fck) * a + 3.2 * math.sqrt(self.fck) * pow(a - 1, 3 / 2))
@@ -584,7 +659,7 @@ class reinforcedIsoBeam:
             ld = K * (11 + 1.5 * math.sqrt(self.fck) * b + 1 / 12 * math.sqrt(self.fck * rho_ / rho_0))
 
         if ld_0 <= ld:
-            return "OKi"
+            return "OK"
         else:
             n = self.Es / self.Ec
             m = rho_ / rho
@@ -595,13 +670,17 @@ class reinforcedIsoBeam:
             x = xd * self.ds1
             I_f = n * As1 * (self.ds1 - x) * (self.ds1 - x / 3) + n * As2 * (
                 x - self.rec) * (x / 3 - self.rec )
+            Qs = As1 * self.h / 2  # reinforcement´s first moment of inertia  from uncracked section´s centroid
+            Qsf = As1 * (self.ds1 - x)  # reinforcement´s first moment of inertia from cracked section´s centroid
 
             Eceff = self.Ec / (1 + self.Phi)
             Mf = self.Wb * self.fctm
             Xi = 1 - 0.5 * (Mf / self.Me) ** 2
-            ke = self.Me / (Eceff * inertiahomo)
-            kf = self.Me / (Eceff * I_f)
-            k = Xi * kf + (1 - Xi) * ke
+            ke = self.Me / (Eceff * inertiahomo)  # full section time dependent curvature
+            kf = self.Me / (Eceff * I_f)  # cracked section timedependent curvature
+            kcs = self.eps_cs * alpha_e * Qs / self.I
+            kcsf = self.eps_cs * alpha_e * Qsf / I_f
+            k = Xi * (kf + kcsf) + (1 - Xi) * (ke + kcs)
 
             deflection = k * 5 / 48 * self.l ** 2
 
@@ -610,28 +689,21 @@ class reinforcedIsoBeam:
             else:
                 return "NOT OK"
 
-
-
-
-
 if __name__ == "__main__":
-    # viga = posTensionedIsoBeam(10000)
-    # Pmin = viga.Pmin()
-    # Ap = viga.Ap(Pmin)
-    # As = viga.checkELU(Ap)
-    # Sh = viga.sectionHomo(Ap,As[0], As[1])
-    # Instantalosses = viga.instantLosses(Pmin, Ap)
-    # Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
+    viga = posTensionedIsoBeam(25000)
+    Pmin = viga.Pmin()
+    Ap = viga.Ap(Pmin)
+    As = viga.checkELU(Ap)
+    Sh = viga.sectionHomo(Ap, As[0], As[1])
+    Instantalosses = viga.instantLosses(Pmin, Ap)
+    Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
     # print(viga.CEcrack(Pmin + Instantalosses + Timedeplosses, Ap,As[0], As[1]))
-    # print(viga.cracked(Pmin + Instantalosses + Timedeplosses, Ap))
-
+    print(viga.CEdeflect(Pmin, Ap, As[0], As[1], Sh[2]))
     """
     Podríamos asumir que habiendo cumplido el equilibrio de momentos no hace falta cumplir el equilibrio de fuerzas 
     """
-    viga2 = reinforcedIsoBeam(10000)
-    As = viga2.As()
-    # print(As)
-    # # print(viga2.h)
-    # # print(viga2.cracked(As[0],As[1]))
-    sectionhomo = viga2.sectionHomo(As[0], As[1])
-    print(viga2.CEdeflect(As[0], As[1], sectionhomo[2]))
+    # viga2 = reinforcedIsoBeam(10000)
+    # As = viga2.As()
+    # print(viga2.CEcrack(As[0],As[1]))
+    # sectionhomo = viga2.sectionHomo(As[0], As[1])
+    # print(viga2.CEdeflect(As[0], As[1], sectionhomo[2]))

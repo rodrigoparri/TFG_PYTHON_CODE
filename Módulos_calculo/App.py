@@ -47,13 +47,14 @@ class IsopostBeamApp:
             passivereinforcement = self.PBeams[instance].checkELU(Ap)
             As1 = passivereinforcement[0]
             As2 = passivereinforcement[1]
-            cracked = self.PBeams[instance].CEcrack(Pmin, Ap, passivereinforcement[0], passivereinforcement[1])
+            CEcracked = self.PBeams[instance].CEcrack(Pmin, Ap, passivereinforcement[0], passivereinforcement[1])
+            CEdeflect = self.PBeams[instance].CEdeflect(Pmin, Ap, As1, As2, sectionhomo[2])
 
             beamcalc[instance] = (b, h, e, Pmin, Pmax, Ap, instantlosses, relinstlosses, timedeplosses, reltimedeplosses,
-                                  As1, As2, cracked)
+                                  As1, As2, CEcracked, CEdeflect)
 
         columnnames = ("b (mm)","h (mm)", "e (mm)", "Pmin (N)", "Pmax (N)", "Ap (mm2)", "instant losses (N)"," (%)",
-                           "time dependent losses (N)"," (%)", "As1 (mm2)", "As2 (mm2)", "Cracked")
+                           "time dependent losses (N)"," (%)", "As1 (mm2)", "As2 (mm2)", "CEcracked", "CEdeflection")
 
         pdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
@@ -99,15 +100,14 @@ class IsoreinforcedBeam:
         pd.set_option("display.max_columns", len(columnnames))
         print(rdf)
 
-
 if __name__ == "__main__":
     """ 
     hay algún problema con la fisuración en ambas vigas, a mayor canto se produce mayor fisuración lo que parece
     sin sentido. 
     """
 
-    # App = IsopostBeamApp(25000, 1000)
-    # App.Pcal()
+    App = IsopostBeamApp(30000, 1000)
+    App.Pcal()
 
-    App2 = IsoreinforcedBeam(25000, 1000)
-    App2.Rcal()
+    # App2 = IsoreinforcedBeam(25000, 1000)
+    # App2.Rcal()
