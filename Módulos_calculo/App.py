@@ -100,14 +100,17 @@ class IsoreinforcedBeam:
         pd.set_option("display.max_columns", len(columnnames))
         print(rdf)
 
+class HiperpostBeamApp:
+    pass
+
 if __name__ == "__main__":
     """ 
     hay algún problema con la fisuración en ambas vigas, a mayor canto se produce mayor fisuración lo que parece
     sin sentido. 
     """
 
-    App = IsopostBeamApp(30000, 1000)
+    App = IsopostBeamApp(25000, 1000)
     App.Pcal()
 
-    # App2 = IsoreinforcedBeam(25000, 1000)
-    # App2.Rcal()
+    App2 = IsoreinforcedBeam(25000, 1000)
+    App2.Rcal()

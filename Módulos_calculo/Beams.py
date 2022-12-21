@@ -689,6 +689,11 @@ class reinforcedIsoBeam:
             else:
                 return "NOT OK"
 
+class posTensionedhiperBeam:
+    pass
+
+class reinforcedhiperBeam:
+    pass
 if __name__ == "__main__":
     viga = posTensionedIsoBeam(25000)
     Pmin = viga.Pmin()
@@ -699,9 +704,7 @@ if __name__ == "__main__":
     Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
     # print(viga.CEcrack(Pmin + Instantalosses + Timedeplosses, Ap,As[0], As[1]))
     print(viga.CEdeflect(Pmin, Ap, As[0], As[1], Sh[2]))
-    """
-    Podríamos asumir que habiendo cumplido el equilibrio de momentos no hace falta cumplir el equilibrio de fuerzas 
-    """
+
     # viga2 = reinforcedIsoBeam(10000)
     # As = viga2.As()
     # print(viga2.CEcrack(As[0],As[1]))
