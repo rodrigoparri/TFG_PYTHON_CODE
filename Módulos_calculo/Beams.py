@@ -752,7 +752,7 @@ class posTensionedHiperBeam:
         40: 1256.64
     }
 
-    def __init__(self, n, l):
+    def __init__(self, l):
 
         self.l = l #  l/d will need checking and recalculations
         height = int(l / 1250) * 50
@@ -877,18 +877,60 @@ class posTensionedHiperBeam:
                     ns - 1) * As2
         return Ah, y, Ih  # Homogenized cross section, neutral plane, depth homogenized inertia.
 
-# REMEMNBER TO CHANGE FRITION LOSSES WITH EVERY CURVATURE
-    def instantLosses(self, P, Ap):  # nu and gamma are the frictión coefficient and involuntary curvature respectively
-        delta_Pfric = P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l ** 2 + self.gamma)))  # Friction losses
-        delta_shortConcrete = self.Ep / self.Ect * (
-                P / self.Ab + P * self.e ** 2 / self.I) * Ap  # Losses caused by concrete´s elastic shortening
-        alpha = 2 * P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l ** 2 + self.gamma))) / self.l
+    def instantLosses(self, P, Ap):  # nu and gamma are the frictión coef2 * theta_sup + 2 * theta_mid + 2 * theta_extficient and involuntary curvature respectively
+        # assuming M(x) = 0 at l/5 from middle support
+        theta_ext = 10 * self.e / self.l  # angular change in extreme spans
+        theta_mid = 40 / 3 * self.e / self.l
+        theta_sup = 20 * self.e / self.l
+
+        delta_Pfric = P * (1 - math.exp(-self.nu * (2 * theta_sup + theta_mid + 2 * theta_ext + self.gamma * 3 * self.l)))  # Friction losses
+        # Losses caused by concrete´s elastic shortening
+        delta_shortConcrete = self.Ep / self.Ect * (P / self.Ab + P * self.e ** 2 / self.I) * Ap
+        #  alpha is two times the friction losses slope
+        alpha = 2 * delta_Pfric / (3 * self.l)
         L_c = math.sqrt(2 * 3 * self.Ep * Ap / alpha)
-        # delta_Pjack = math.sqrt(2 * 3 * alpha * self.Ep * Ap)
+
         delta_Pjack = alpha * L_c
         # losses in the active jack.
         instantLosses = delta_Pfric + delta_shortConcrete + delta_Pjack
         return instantLosses
+
+    def timedepLosses(self, P, Ap, areahomo, depthhomo, inertiahomo):
+
+        relaxation = 0
+        # calculate stress with Ep*epsp calculate eps with the gross cross section and multiply by 2,9 to account for relaxation
+        initial_tension = self.Ep / self.Ec * (
+                - P / areahomo - (P * self.e ** 2 + self.Me_pos * self.e) / inertiahomo)
+        initial_tension = abs(initial_tension)
+
+        if initial_tension >= .6 * self.fpk:
+            relaxation = .015
+        elif initial_tension >= 0.7 * self.fpk:
+            relaxation = .025
+        elif initial_tension >= .8 * self.fpk:
+            relaxation = .045
+
+        sigma_pr = initial_tension * (1 - 3 * relaxation)
+        sigma_cQp = initial_tension / self.Ep
+
+        numerator = Ap * self.eps_cs * self.Ep + .8 * abs(initial_tension - sigma_pr) + self.Ep / self.Ec * self.Phi * sigma_cQp
+        denominator = 1 + self.Ep * Ap / (self.Ec * self.Ab) * (1 + self.Ab / self.I * depthhomo ** 2) * (1 + .8 * self.Phi)
+
+        timedepLosses = numerator / denominator
+        return timedepLosses
+
+    def Ap(self, P):
+        Apin = 10
+        Apout = 0
+
+        while True:  # reference value.
+            Apout = self.instantLosses(P, Apin) / (0.1 * self.fpk)
+            if abs(Apout - Apin) > 1:
+                Apin = Apout
+                continue
+            else:
+                break
+        return Apout
 
 class reinforcedhiperBeam:
     pass
@@ -928,18 +970,34 @@ class costBeams:
             self.unitprices["preten_steel"] = 8.64
 
 if __name__ == "__main__":
-    viga = posTensionedIsoBeam(25000)
-    Pmin = viga.Pmin()
-    Ap = viga.Ap(Pmin)
-    As = viga.checkELU(Ap)
-    Sh = viga.sectionHomo(Ap, As[0], As[1])
-    Instantalosses = viga.instantLosses(Pmin, Ap)
-    Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
+    # viga = posTensionedIsoBeam(25000)
+    # Pmin = viga.Pmin()
+    # Ap = viga.Ap(Pmin)
+    # As = viga.checkELU(Ap)
+    # Sh = viga.sectionHomo(Ap, As[0], As[1])
+    # Instantalosses = viga.instantLosses(Pmin, Ap)
+    # Timedeplosses = viga.timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
     # print(viga.CEcrack(Pmin + Instantalosses + Timedeplosses, Ap,As[0], As[1]))
-    print(viga.CEdeflect(Pmin, Ap, As[0], As[1], Sh[2]))
+    # print(viga.CEdeflect(Pmin, Ap, As[0], As[1], Sh[2]))
 
     # viga2 = reinforcedIsoBeam(10000)
     # As = viga2.As()
     # print(viga2.CEcrack(As[0],As[1]))
     # sectionhomo = viga2.sectionHomo(As[0], As[1])
     # print(viga2.CEdeflect(As[0], As[1], sectionhomo[2]))
+
+    viga3 = posTensionedHiperBeam(5000)
+    Pmin = viga3.Pmin()
+    Pmax = viga3.Pmax()
+    Ap = viga3.Ap(Pmin)
+    sectionHomo = viga3.sectionHomo(Ap)
+    instLosses = viga3.instantLosses(Pmin, Ap)
+    timedepLosses = viga3.timedepLosses(Pmin,Ap, sectionHomo[0], sectionHomo[1],sectionHomo[2])
+
+    print(Ap)
+    print(Pmin)
+    # print(Pmax)
+    print(instLosses)
+    print(instLosses / Pmin * 100)
+    # print(timedepLosses)
+    # print(timedepLosses / Pmin * 100)
