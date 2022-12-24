@@ -1058,7 +1058,68 @@ class posTensionedHiperBeam:
             else:
                 return "NOT OK"
 
+    def CEdeflect(self, P, Ap, As1, As2, inertiahomo):
+        rho = (As1 + Ap) / self.Ab
+        rho_ = As2 / self.Ab
+        rho_0 = 1e-3 * math.sqrt(self.fck)
+        a = rho_0 / rho
+        b = rho_0 / (rho - rho_)
+        K = 1
+        ld = 0
+        ld_0 = self.l / self.ds1
+        eqL = self.equivalentLoad(P)
+        M = self.Me_pos - eqL[0] * pow(self.l, 2) / 20.0
+
+        if rho <= rho_0:
+            ld = K * (11 + 1.5 * math.sqrt(self.fck) * a + 3.2 * math.sqrt(self.fck) * pow(a - 1, 3 / 2))
+        else:
+            ld = K * (11 + 1.5 * math.sqrt(self.fck) * b + 1 / 12 * math.sqrt(self.fck * rho_ / rho_0))
+
+        if ld_0 <= ld:
+            return "OK"
+        else:
+            ns = self.Es / self.Ec
+            np = self.Ep / self.Ec
+            m = rho_ / rho
+
+            # NO CRACKED SECTION IS CONSIDERED
+            # if rho_ != 0:
+            #     xd = np * rho * (1 + m) * (
+            #         -1 + math.sqrt(1 + 2 * (1 + m * self.recp / self.ds1) / (
+            #         np * rho * (1 + m) ** 2 ))) # Cracked inertia from centroid
+            # else:
+            #     xd = np * rho * (-1 + math.sqrt(1 + 2 / (np * rho)))
+
+            # x = xd * self.ds1
+            # I_f = ns * As1 * (self.ds1 - x) * (self.ds1 - x / 3) + ns * As2 * (
+            #     x - self.recp) * (x / 3 - self.recp) + np * Ap * (self.dp - x) * (
+            #     self.dp - x / 3)
+            Qs = As1 * self.h / 2  # reinforcement´s first moment of inertia  from uncracked section´s centroid
+            # Qsf = As1 * (self.ds1 - x)  # reinforcement´s first moment of inertia from cracked section´s centroid
+
+            Eceff = self.Ec / (1 + self.Phi)
+            # Mf = self.Wb * self.fctm
+            # Xi = 1 - 0.5 * (Mf / M) ** 2
+            Xi = 0
+            ke = M / (Eceff * inertiahomo)
+            # kf = M / (Eceff * I_f)
+            kcs = self.eps_cs * np * Qs / self.I
+            # kcsf = self.eps_cs * np * Qsf / I_f
+            # k = Xi * (kf + kcsf) + (1 - Xi) * (ke + kcs)
+            k = (1 - Xi) * (ke + kcs)
+
+            deflection = k * 5 / 48 * self.l ** 2
+
+            if deflection < self.l / 400:
+                return "OK"
+            else:
+                return "NOT OK"
 class reinforcedhiperBeam:
+
+
+
+
+
     pass
 
 
@@ -1112,7 +1173,7 @@ if __name__ == "__main__":
     # sectionhomo = viga2.sectionHomo(As[0], As[1])
     # print(viga2.CEdeflect(As[0], As[1], sectionhomo[2]))
 
-    viga3 = posTensionedHiperBeam(8000)
+    viga3 = posTensionedHiperBeam(10000)
     Pmin = viga3.Pmin()
     Pmax = viga3.Pmax()
     Ap = viga3.Ap(Pmin)
@@ -1121,8 +1182,8 @@ if __name__ == "__main__":
     timedepLosses = viga3.timedepLosses(Pmin,Ap, sectionHomo[0], sectionHomo[1],sectionHomo[2])
     ElUpos = viga3.checkELUpos(Ap)
     ElUneg = viga3.checkELUneg(Ap)
-    crackedpos = viga3.CEcrack(Ap, ElUpos[0])
-    crackedneg = viga3.CEcrack(Ap, ElUneg[0])
+    # crackedpos = viga3.CEcrack(Ap, ElUpos[0])
+    # crackedneg = viga3.CEcrack(Ap, ElUneg[0])
 
     print(f"Ap {Ap}")
     print(f"Pmin {Pmin}")
@@ -1133,5 +1194,5 @@ if __name__ == "__main__":
     print(timedepLosses / Pmin * 100)
     print(f"As_pos {ElUpos}")
     print(f"As_neg {ElUneg}")
-    print(f"Cracked_pos {crackedpos}")
-    print(f"Cracked_neg {crackedneg}")
+    # print(f"Cracked_pos {crackedpos}")
+    # print(f"Cracked_neg {crackedneg}")

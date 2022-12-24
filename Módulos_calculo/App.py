@@ -141,16 +141,45 @@ class HiperpostBeamApp:
             NegReinf = self.HiperPBeams[instance].checkELUneg(Ap)
             As1_pos = PosReinf[0]
             As2_pos = PosReinf[1]
-            As1_neg = PosReinf[0]
-            As2_neg = PosReinf[1]
-            # CEcracked = self.HiperPBeams[instance].CEcrack(Pmin, Ap, PosReinf[0], PosReinf[1])
-            # CEdeflect = self.HiperPBeams[instance].CEdeflect(Pmin, Ap, As1, As2, sectHomo[2])
+            As1_neg = NegReinf[0]
+            As2_neg = NegReinf[1]
+            CEcracked = self.HiperPBeams[instance].CEcrack(Ap, As1_pos)
+            CEdeflect = self.HiperPBeams[instance].CEdeflect(Pmin, Ap, As1_pos, As1_neg, sectHomo[2])
 
-            beamcalc[instance] = (b, h, e, Pmin, Pmax, Ap, instantlosses, relinstlosses, timedeplosses, reltimedeplosses,
-                                  As1_pos, As2_pos, As1_neg, As2_neg)
+            beamcalc[instance] = (b,
+                                  h,
+                                  e,
+                                  Pmin,
+                                  Pmax,
+                                  Ap,
+                                  instantlosses,
+                                  relinstlosses,
+                                  timedeplosses,
+                                  reltimedeplosses,
+                                  As1_pos,
+                                  As2_pos,
+                                  As1_neg,
+                                  As2_neg,
+                                  CEcracked,
+                                  CEdeflect
+                                  )
 
-        columnnames = ("b (mm)","h (mm)", "e (mm)", "Pmin (N)", "Pmax (N)", "Ap (mm2)", "instant losses (N)"," (%)",
-                           "time dependent losses (N)"," (%)", "As1_pos (mm2)", "As2_pos (mm2)", "As1_neg (mm2)", "As2_neg (mm2)")
+        columnnames = ("b (mm)",
+                       "h (mm)",
+                       "e (mm)",
+                       "Pmin (N)",
+                       "Pmax (N)",
+                       "Ap (mm2)",
+                       "instant losses (N)",
+                       " (%)",
+                       "time dependent losses (N)",
+                       " (%)", "As1_pos (mm2)",
+                       "As2_pos (mm2)",
+                       "As1_neg (mm2)",
+                       "As2_neg (mm2)",
+                       "CEcracked",
+                       "Cedeflect"
+                       )
 
         pdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
