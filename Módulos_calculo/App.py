@@ -60,7 +60,7 @@ class IsopostBeamApp:
         pd.set_option("display.max_columns", len(columnnames))
         print(pdf)
 
-class IsoreinforcedBeam:
+class IsoreinforcedBeamApp:
 
     def __init__(self, limit, step):
 
@@ -185,6 +185,72 @@ class HiperpostBeamApp:
         pd.set_option("display.max_columns", len(columnnames))
         print(pdf)
 
+class HiperreinforecedBeamApp:
+
+    def __init__(self, limit, step):
+
+        self.HiperRBeams = {}
+
+        for length in self.lengen(limit, step):
+
+            self.HiperRBeams[str(Beams.reinforcedhiperBeam(length))] = Beams.reinforcedhiperBeam(length)
+
+    @staticmethod
+    def lengen(limit, step):  # method that generates the next length as it´s called
+
+        n = 5000
+        while n <= limit:
+            yield n
+            n += step
+
+    def HiperRcal(self):
+        beamcalc = {}
+
+        for instance in self.HiperRBeams:
+
+            b = self.HiperRBeams[instance].b
+            h = self.HiperRBeams[instance].h
+            # Me = self.HiperRBeams[instance].Me * 1e-6
+            # Mu = self.HiperRBeams[instance].Mu * 1e-6
+            As_pos = self.HiperRBeams[instance].As_pos()
+            As_neg = self.HiperRBeams[instance].As_neg()
+            secthomo = self.HiperRBeams[instance].sectionHomo(As_pos[0], As_pos[1])
+            CEcracked_pos = self.HiperRBeams[instance].CEcrack_pos(As_pos[0])
+            CEcracked_neg = self.HiperRBeams[instance].CEcrack_neg(As_neg[0])
+            CEdeflect = self.HiperRBeams[instance].CEdeflect(As_pos[0], As_pos[1],secthomo[2])
+
+            beamcalc[instance] = (
+                b,
+                h,
+                # Me,
+                # Mu,
+                As_pos[0],
+                As_pos[1],
+                As_neg[0],
+                As_neg[1],
+                CEcracked_pos,
+                CEcracked_neg,
+                CEdeflect
+            )
+
+        columnnames = (
+            "b (mm)",
+            "h (mm)",
+            # "Me (mkN)",
+            # "Mu (mkN)",
+            "As1_pos (mm2)",
+            "As2_pos (mm2)",
+            "As1_neg (mm2)",
+            "As2_neg (mm2)",
+            "CEcracked_pos",
+            "CEcracked_neg",
+            "CEdeflection"
+        )
+        rdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
+        pd.set_option("display.max_columns", len(columnnames))
+        print(rdf)
+
+
 if __name__ == "__main__":
     """ 
     hay algún problema con la fisuración en ambas vigas, a mayor canto se produce mayor fisuración lo que parece
@@ -194,8 +260,11 @@ if __name__ == "__main__":
     # App = IsopostBeamApp(25000, 1000)
     # App.IsoPcal()
     #
-    # App2 = IsoreinforcedBeam(25000, 1000)
+    # App2 = IsoreinforcedBeamApp(25000, 1000)
     # App2.IsoRcal()
 
-    App3 = HiperpostBeamApp(25000, 1000)
-    App3.HiperPcal()
+    # App3 = HiperpostBeamApp(25000, 1000)
+    # App3.HiperPcal()
+
+    App3 = HiperreinforecedBeamApp(25000, 1000)
+    App3.HiperRcal()

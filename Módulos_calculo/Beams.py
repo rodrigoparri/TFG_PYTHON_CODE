@@ -1116,11 +1116,334 @@ class posTensionedHiperBeam:
                 return "NOT OK"
 class reinforcedhiperBeam:
 
+    fck = 35
+    fctm = 3.2
+    Ec = 34000
+    Phi = 2  # creep coeffitient
+    eps_cd0 = 0.00041  # initial shrinkage strain
+    rec = 30  # concrete cover
+    #  Passive steel properties
+    fyk = 500
+    Es = 200000
+    # load at transfer N/mm2
+    construction = 1
+    # full loads N/mm
+    selfweight = 0
+    partwalls = 1
+    use_load = 0
+    flooring = 1.5
+    # bars D:area
+    bars = {
+        6: 28.27,
+        8: 50.27,
+        10: 78.54,
+        12: 113.10,
+        14: 153.94,
+        16: 201.06,
+        20: 314.16,
+        25: 490.87,
+        32: 804.25,
+        40: 1256.64
+    }
+    length_fraction = 19
 
+    def __init__(self, l):
 
+        height = l / self.length_fraction  # first h aproximation
+        haprox = int(height / 50) * 50
 
+        if haprox < height:
+            height = haprox + 50
+        else:
+            height = haprox
 
-    pass
+        width = int(height * 2 / 150) * 50
+        if width < (height * 2 / 3):
+            self.b = width + 50
+        else:
+            self.b = width
+
+        self.l = l
+
+        self.Ab = height * self.b  # gross cross section
+        self.Wb = height ** 2 * self.b / 6  # gross section modulus
+        self.Wu = self.b * (height - self.rec) ** 2
+        self.I = self.b * height ** 3 / 12  # gross moment of inertia
+        self.selfweight = self.Ab * 24 * 1e-6
+
+        if self.l >= 7000:
+            self.use_load = 5
+        else:
+            self.use_load = 2
+
+        self.charac_load = 1.35 * (self.selfweight + self.partwalls + self.flooring) + 1.5 * self.use_load
+        self.almostper_load = self.selfweight + self.partwalls + self.flooring + 0.6 * self.use_load
+        self.Me_pos = self.almostper_load * self.l ** 2 / 20  # Max positive moment under almost permanent loads
+        self.Me_neg = self.almostper_load * self.l ** 2 / 10  # Max negative moment under almost permanent loads
+        self.Mu_pos = self.charac_load * self.l ** 2 / 20  # Max positive moment under characteristic load.
+        self.Mu_neg = self.charac_load * self.l ** 2 / 10  # Max negative moment under characteristic load.
+
+        hmin = self.Wmin(self.b)[1] + self.rec
+
+        if height < hmin:
+
+            self.h = self.aprox(height, 50)
+        else:
+            self.h = height
+
+        self.ds1 = self.h - self.rec
+
+        ho = self.Ab / (self.h + self.b)
+        kh = 0
+        # relaxation = 0
+
+        if ho <= 200:
+            kh = 1
+        elif 200 < ho and ho <= 300:
+            kh = 0.85
+        elif 300 < ho and ho <= 500:
+            kh = 0.75
+        elif ho > 500:
+            kh = 0.7
+
+        # betha_ds = 23 / (23 * 0.04 * ((ho) ** 3) ** 0.5)
+
+        # eps_cd = kh * betha_ds * self.eps_cd0  # drying strain
+        eps_cd = kh * self.eps_cd0
+        # eps_ca = betha_ds * 2.5 * (self.fck - 10) * (10 ** -6)  # shrinkage strain
+        eps_ca = 2.5 * (self.fck - 10) * (10 ** -6)
+        self.eps_cs = eps_cd + eps_ca  # total shrinkage strain
+
+    def __str__(self) -> str:
+        text = f"IsoRB{self.l / 1000}"
+        return text
+
+    @staticmethod
+    def aprox(value, div):
+        """
+        aproximate any continuous value to a set of discrete equally spaced values.
+        :param value: value is the value you want to aproximate to an infinite set of discrete equally spaced values
+        :param div: is the distance between those discrete values
+        :return: the value within the set just above it
+        """
+        a = int(value / div) * div
+        a += div
+        return a
+
+    def Wmin(self, b=0):  # in this context W means bd^2
+
+        Wmin = self.Mu_neg * 1.5 / (0.8 * 0.86 * 0.35 * self.fck)  # x/d is assumed to be = 0.35
+
+        if b != 0:  # checks if a "b" parameter has been introduced
+            dmin = math.sqrt(Wmin / b)
+            return Wmin, dmin
+        else:
+            return Wmin
+
+    def As_pos(self):
+        x = 0
+        M = 0.8 * x * self.fck * self.b * (self.ds1 - 0.8 * x / 2) / 1.5
+        prevAs1 = 0
+        prevAs2 = 0
+
+        while self.Mu_pos > M:
+            increAs1 = (self.Mu_pos - M) * 1.15 / ((self.h - self.rec) * self.fyk)  # passive reinforcement necessary
+            prevAs1 += increAs1
+            x = 1.5 * (prevAs1 * self.fyk - prevAs2 * self.fyk) / (1.15 * .8 * self.b * self.fck)   # recalculate neutral fibre.
+
+            if x / self.ds1 > 0.35:  # strain needs to be checked.
+                increAs2 = increAs1  # increment in top reinforcement is equal to the difference between
+                # the current As1 and the previous value for As1.
+                prevAs2 += increAs2
+
+            M = prevAs1 * self.fyk / 1.15 * self.ds1 - prevAs2 * self.fyk / 1.15 * self.rec - 0.32 * x ** 2 * self.b * self.fck / 1.5
+
+        return prevAs1, prevAs2
+
+    def As_neg(self):
+        x = 0
+        M = 0.8 * x * self.fck * self.b * (self.ds1 - 0.8 * x / 2) / 1.5
+        prevAs1 = 0
+        prevAs2 = 0
+
+        while self.Mu_neg > M:
+            increAs1 = (self.Mu_neg - M) * 1.15 / ((self.h - self.rec) * self.fyk)  # passive reinforcement necessary
+            prevAs1 += increAs1
+            x = 1.5 * (prevAs1 * self.fyk - prevAs2 * self.fyk) / (1.15 * .8 * self.b * self.fck)   # recalculate neutral fibre.
+
+            if x / self.ds1 > 0.35:  # strain needs to be checked.
+                increAs2 = increAs1  # increment in top reinforcement is equal to the difference between
+                # the current As1 and the previous value for As1.
+                prevAs2 += increAs2
+
+            M = prevAs1 * self.fyk / 1.15 * self.ds1 - prevAs2 * self.fyk / 1.15 * self.rec - 0.32 * x ** 2 * self.b * self.fck / 1.5
+
+        return prevAs1, prevAs2
+
+    def sectionHomo(self, As1=0, d1=0, As2=0, d2=0):
+        # As1 and As2 are the bottom and top passive reinforcement areas
+        ns = self.Es / self.Ec
+        Ah = self.b * self.h + (ns - 1) * (As1 + As2)  # homogeneous cross section
+        # position of the centroid from top fibre
+        y = (self.h / 2 * (self.h * self.b) + d1 * (ns - 1) * As1 + d2 * (ns - 1) * As2) / Ah
+        Ih = self.b * self.h ** 3 / 12 + d1 ** 2 * (ns - 1) * As1 + d2 ** 2 * (
+                    ns - 1) * As2
+        return Ah, y, Ih  # Homogenized cross section, neutral plane, depth homogenized inertia.
+
+    def CEcrack_pos(self, As1):
+        phi = 0
+        m = 0
+        for bar in self.bars:
+            m = As1 / self.bars[bar]
+            m = self.aprox(m, 1)
+
+            if (2 * self.rec + m * bar + (m - 1) * 20) > self.b:
+                continue
+            else:
+                phi = bar
+                break
+
+        # Xi_1 = math.sqrt(0.5)
+        h_Cr = (2.5 * self.rec, self.h / 2, (0.65 * self.h + 0.35 * self.rec) / 3)
+        A_ceff = self.b * min(h_Cr)
+        rho_peff = (As1)/ A_ceff
+        s_r = 3.4 * self.rec + 0.8 * 0.5 * 0.425 * phi / rho_peff
+
+        if phi == 6:
+            sigma_s = 450
+        elif phi == 8:
+            sigma_s = 400
+        elif phi == 10:
+            sigma_s = 360
+        elif phi == 12:
+            sigma_s = 320
+        elif phi == 14:
+            sigma_s = 280
+        elif phi == 16:
+            sigma_s = 280
+        elif phi == 20:
+            sigma_s = 240
+        elif phi == 25:
+            sigma_s = 200
+        elif phi == 32:
+            sigma_s = 200
+        else:
+            sigma_s = 160
+
+        alpha_e = self.Es / self.Ec
+        diff_eps = (sigma_s - 0.4 * self.fctm / rho_peff * (1 + alpha_e * rho_peff)) / self.Es
+        lim = 0.6 * sigma_s / self.Es
+
+        if diff_eps < lim:
+            diff_eps = lim
+
+        w_k = s_r * diff_eps
+
+        if w_k < 0.4:
+            return "OK"
+        else:
+            return "NOT OK"
+
+    def CEcrack_neg(self, As1):
+        phi = 0
+        m = 0
+        for bar in self.bars:
+            m = As1 / self.bars[bar]
+            m = self.aprox(m, 1)
+
+            if (2 * self.rec + m * bar + (m - 1) * 20) > self.b:
+                continue
+            else:
+                phi = bar
+                break
+
+        # Xi_1 = math.sqrt(0.5)
+        h_Cr = (2.5 * self.rec, self.h / 2, (0.65 * self.h + 0.35 * self.rec) / 3)
+        A_ceff = self.b * min(h_Cr)
+        rho_peff = (As1) / A_ceff
+        s_r = 3.4 * self.rec + 0.8 * 0.5 * 0.425 * phi / rho_peff
+
+        if phi == 6:
+            sigma_s = 450
+        elif phi == 8:
+            sigma_s = 400
+        elif phi == 10:
+            sigma_s = 360
+        elif phi == 12:
+            sigma_s = 320
+        elif phi == 14:
+            sigma_s = 280
+        elif phi == 16:
+            sigma_s = 280
+        elif phi == 20:
+            sigma_s = 240
+        elif phi == 25:
+            sigma_s = 200
+        elif phi == 32:
+            sigma_s = 200
+        else:
+            sigma_s = 160
+
+        alpha_e = self.Es / self.Ec
+        diff_eps = (sigma_s - 0.4 * self.fctm / rho_peff * (1 + alpha_e * rho_peff)) / self.Es
+        lim = 0.6 * sigma_s / self.Es
+
+        if diff_eps < lim:
+            diff_eps = lim
+
+        w_k = s_r * diff_eps
+
+        if w_k < 0.4:
+            return "OK"
+        else:
+            return "NOT OK"
+
+    def CEdeflect(self, As1, As2, inertiahomo):
+        rho = As1 / self.Ab
+        rho_ = As2 / self.Ab
+        rho_0 = 1e-3 * math.sqrt(self.fck)
+        a = rho_0 / rho
+        b = rho_0 / (rho - rho_)
+        K = 1
+        ld = 0
+        ld_0 = self.l / self.ds1
+        alpha_e = self.Es / self.Ec
+
+        if rho <= rho_0:
+            ld = K * (11 + 1.5 * math.sqrt(self.fck) * a + 3.2 * math.sqrt(self.fck) * pow(a - 1, 3 / 2))
+        else:
+            ld = K * (11 + 1.5 * math.sqrt(self.fck) * b + 1 / 12 * math.sqrt(self.fck * rho_ / rho_0))
+
+        if ld_0 <= ld:
+            return "OK"
+        else:
+            n = self.Es / self.Ec
+            m = rho_ / rho
+            xd = n * rho * (1 + m) * (
+                -1 + math.sqrt(1 + 2 * (1 + m * self.rec / self.ds1) / (
+                n * rho * (1 + m) ** 2 ))) # Cracked inertia from centroid
+
+            x = xd * self.ds1
+            I_f = n * As1 * (self.ds1 - x) * (self.ds1 - x / 3) + n * As2 * (
+                x - self.rec) * (x / 3 - self.rec )
+            Qs = As1 * self.h / 2  # reinforcement´s first moment of inertia  from uncracked section´s centroid
+            Qsf = As1 * (self.ds1 - x)  # reinforcement´s first moment of inertia from cracked section´s centroid
+
+            Eceff = self.Ec / (1 + self.Phi)
+            Mf = self.Wb * self.fctm
+            Xi = 1 - 0.5 * (Mf / self.Me_pos) ** 2
+            ke = self.Me_pos / (Eceff * inertiahomo)  # full section time dependent curvature
+            kf = self.Me_pos / (Eceff * I_f)  # cracked section timedependent curvature
+            kcs = self.eps_cs * alpha_e * Qs / self.I
+            kcsf = self.eps_cs * alpha_e * Qsf / I_f
+            k = Xi * (kf + kcsf) + (1 - Xi) * (ke + kcs)
+
+            deflection = k * 5 / 48 * self.l ** 2
+
+            if deflection < self.l / 400:
+                return "OK"
+            else:
+                return "NOT OK"
 
 
 class costBeams:
