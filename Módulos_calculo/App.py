@@ -193,7 +193,7 @@ class HiperreinforecedBeamApp:
 
         for length in self.lengen(limit, step):
 
-            self.HiperRBeams[str(Beams.reinforcedhiperBeam(length))] = Beams.reinforcedhiperBeam(length)
+            self.HiperRBeams[str(Beams.reinforcedHiperBeam(length))] = Beams.reinforcedHiperBeam(length)
 
     @staticmethod
     def lengen(limit, step):  # method that generates the next length as it´s called
@@ -263,8 +263,8 @@ if __name__ == "__main__":
     # App2 = IsoreinforcedBeamApp(25000, 1000)
     # App2.IsoRcal()
 
-    # App3 = HiperpostBeamApp(25000, 1000)
-    # App3.HiperPcal()
+    App3 = HiperpostBeamApp(25000, 1000)
+    App3.HiperPcal()
 
-    App3 = HiperreinforecedBeamApp(25000, 1000)
-    App3.HiperRcal()
+    # App3 = HiperreinforecedBeamApp(25000, 1000)
+    # App3.HiperRcal()

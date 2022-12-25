@@ -751,12 +751,12 @@ class posTensionedHiperBeam:
         32: 804.25,
         40: 1256.64
     }
-
+    length_fraction = 32
     def __init__(self, l):
 
         self.l = l #  l/d will need checking and recalculations
-        height = int(l / 1250) * 50
-        if height < l / 25:
+        height = int(l / (self.length_fraction * 50)) * 50
+        if height < l / self.length_fraction:
             self.h = height + 50
         else:
             self.h = height
@@ -791,7 +791,8 @@ class posTensionedHiperBeam:
         self.Mi_neg = self.frec_transfer_load * self.l ** 2 / 10  # Max initial moment under loads at transfer.
         self.Mf_neg = self.frec_full_load * self.l ** 2 / 10  # Max moment under full loads.
         self.Me_neg = self.almostper_load * self.l ** 2 / 10  # Max moment under almost permanent loads
-        self.Mu_neg = self.charac_load * self.l ** 2 / 10  # Max moment under characteristic load.
+        self.Mu_neg = 3 * self.charac_load * self.l ** 2 / 40  # Max negative moment under characteristic load.
+        self.Mu_pos = 7 * self.charac_load * self.l ** 2 / 80  # Max positive moment under characteristic load.
         self.Wmin = (1.1 * self.Mf_neg - 0.9 * self.Mi_neg) / (0.54 * self.fckt + 1.1 * self.fctm)
 
 # _____ Max positive Moment_____
@@ -1114,7 +1115,7 @@ class posTensionedHiperBeam:
                 return "OK"
             else:
                 return "NOT OK"
-class reinforcedhiperBeam:
+class reinforcedHiperBeam:
 
     fck = 35
     fctm = 3.2
@@ -1145,7 +1146,7 @@ class reinforcedhiperBeam:
         32: 804.25,
         40: 1256.64
     }
-    length_fraction = 19
+    length_fraction = 21
 
     def __init__(self, l):
 
@@ -1180,8 +1181,8 @@ class reinforcedhiperBeam:
         self.almostper_load = self.selfweight + self.partwalls + self.flooring + 0.6 * self.use_load
         self.Me_pos = self.almostper_load * self.l ** 2 / 20  # Max positive moment under almost permanent loads
         self.Me_neg = self.almostper_load * self.l ** 2 / 10  # Max negative moment under almost permanent loads
-        self.Mu_pos = self.charac_load * self.l ** 2 / 20  # Max positive moment under characteristic load.
-        self.Mu_neg = self.charac_load * self.l ** 2 / 10  # Max negative moment under characteristic load.
+        self.Mu_pos = 7 * self.charac_load * self.l ** 2 / 80  # Max positive moment under characteristic load.
+        self.Mu_neg = 3 * self.charac_load * self.l ** 2 / 40  # Max negative moment under characteristic load.
 
         hmin = self.Wmin(self.b)[1] + self.rec
 
@@ -1445,29 +1446,28 @@ class reinforcedhiperBeam:
             else:
                 return "NOT OK"
 
-
 class costBeams:
 
     unitprices = {
 # _____MATERIALS_____
         "wooden_board (m2)": 45.50,
         "formwork_girders (m2)": 185,
-        "strut (Ud)":26.47,
-        "reinfSteel (kg)":1.6,
-        "concrete (m3)":90.21,
-        "preten_steel":0,  # included PP of jacks,ducts,anchorages...
+        "strut (Ud)": 26.47,
+        "reinfSteel (kg)": 1.6,
+        "concrete (m3)": 90.21,
+        "preten_steel": 0,  # included PP of jacks,ducts,anchorages...
 # _____EQUIPMENT_____
-        "elevator_trolley":26.75,
-        "pump_truck":190.40,
+        "elevator_trolley": 26.75,
+        "pump_truck": 190.40,
 # _____WORK FORCE_____
         "shuttering_officer": 22.27,
-        "shutterin_helper":21.15,
-        "iron_worker_officer":22.27,
+        "shutterin_helper": 21.15,
+        "iron_worker_officer": 22.27,
         "iron_worker_helper": 21.15,
-        "concrete_manufacturer_officer":22.27,
-        "concrete_manufacturer_helper":21.15,
-        "steel_manufacturer_officer":22.27,
-        "steel_manufacturer_helper":21.15
+        "concrete_manufacturer_officer": 22.27,
+        "concrete_manufacturer_helper": 21.15,
+        "steel_manufacturer_officer": 22.27,
+        "steel_manufacturer_helper": 21.15
     }
 
     def __init__(self, l, Ab, Ap, As):
