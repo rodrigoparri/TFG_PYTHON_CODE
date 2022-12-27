@@ -65,6 +65,28 @@ class posTensionedIsoBeam:
         40: 1256.64
     }
 
+    unitprices = {
+        # _____MATERIALS_____
+        "wooden_board (m2)": 45.50,
+        "formwork_girders (m2)": 185,
+        "strut (Ud)": 26.47,
+        "reinfSteel (kg)": 1.6,
+        "concrete (m3)": 90.21,
+        "preten_steel": 0,  # included PP of jacks,ducts,anchorages...
+        # _____EQUIPMENT_____
+        "elevator_trolley": 26.75,
+        "pump_truck": 190.40,
+        # _____WORK FORCE_____
+        "shuttering_officer": 22.27,
+        "shutterin_helper": 21.15,
+        "iron_worker_officer": 22.27,
+        "iron_worker_helper": 21.15,
+        "concrete_manufacturer_officer": 22.27,
+        "concrete_manufacturer_helper": 21.15,
+        "steel_manufacturer_officer": 22.27,
+        "steel_manufacturer_helper": 21.15
+    }
+
     def __init__(self, l):
 
         self.l = l
@@ -130,6 +152,13 @@ class posTensionedIsoBeam:
         # eps_ca = betha_ds * 2.5 * (self.fck - 10) * (10 ** -6)  # shrinkage strain
         eps_ca = 2.5 * (self.fck - 10) * (10 ** -6)
         self.eps_cs = eps_cd + eps_ca  # total shrinkage strain
+
+        if self.l < 7:
+            self.unitprices["preten_steel"] = 5.40
+        elif self.l >= 7 and l <=10:
+            self.unitprices["preten_steel"] = 7.02
+        elif self.l > 10:
+            self.unitprices["preten_steel"] = 8.64
 
     def __str__(self) -> str:
         text = f"IsoPB{self.l / 1000}"
@@ -446,6 +475,28 @@ class reinforcedIsoBeam:
     }
     length_fraction = 19
 
+    unitprices = {
+        # _____MATERIALS_____
+        "wooden_board (m2)": 45.50,
+        "formwork_girders (m2)": 185,
+        "strut (Ud)": 26.47,
+        "reinfSteel (kg)": 1.6,
+        "concrete (m3)": 90.21,
+        "preten_steel": 0,  # included PP of jacks,ducts,anchorages...
+        # _____EQUIPMENT_____
+        "elevator_trolley": 26.75,
+        "pump_truck": 190.40,
+        # _____WORK FORCE_____
+        "shuttering_officer": 22.27,
+        "shutterin_helper": 21.15,
+        "iron_worker_officer": 22.27,
+        "iron_worker_helper": 21.15,
+        "concrete_manufacturer_officer": 22.27,
+        "concrete_manufacturer_helper": 21.15,
+        "steel_manufacturer_officer": 22.27,
+        "steel_manufacturer_helper": 21.15
+    }
+
     def __init__(self, l):
 
         height = l / self.length_fraction  # first h aproximation
@@ -752,6 +803,29 @@ class posTensionedHiperBeam:
         40: 1256.64
     }
     length_fraction = 32
+
+    unitprices = {
+        # _____MATERIALS_____
+        "wooden_board (m2)": 45.50,
+        "formwork_girders (m2)": 185,
+        "strut (Ud)": 26.47,
+        "reinfSteel (kg)": 1.6,
+        "concrete (m3)": 90.21,
+        "preten_steel": 0,  # included PP of jacks,ducts,anchorages...
+        # _____EQUIPMENT_____
+        "elevator_trolley": 26.75,
+        "pump_truck": 190.40,
+        # _____WORK FORCE_____
+        "shuttering_officer": 22.27,
+        "shutterin_helper": 21.15,
+        "iron_worker_officer": 22.27,
+        "iron_worker_helper": 21.15,
+        "concrete_manufacturer_officer": 22.27,
+        "concrete_manufacturer_helper": 21.15,
+        "steel_manufacturer_officer": 22.27,
+        "steel_manufacturer_helper": 21.15
+    }
+
     def __init__(self, l):
 
         self.l = l #  l/d will need checking and recalculations
@@ -823,6 +897,12 @@ class posTensionedHiperBeam:
         eps_ca = 2.5 * (self.fck - 10) * (10 ** -6)
         self.eps_cs = eps_cd + eps_ca  # total shrinkage strain
 
+        if self.l < 7:
+            self.unitprices["preten_steel"] = 5.40
+        elif self.l >= 7 and l <=10:
+            self.unitprices["preten_steel"] = 7.02
+        elif self.l > 10:
+            self.unitprices["preten_steel"] = 8.64
 
     def __str__(self) -> str:
         text = f"HiperPB{self.l / 1000}"
@@ -1148,6 +1228,28 @@ class reinforcedHiperBeam:
     }
     length_fraction = 21
 
+    unitprices = {
+        # _____MATERIALS_____
+        "wooden_board (m2)": 45.50,
+        "formwork_girders (m2)": 185,
+        "strut (Ud)": 26.47,
+        "reinfSteel (kg)": 1.6,
+        "concrete (m3)": 90.21,
+        "preten_steel": 0,  # included PP of jacks,ducts,anchorages...
+        # _____EQUIPMENT_____
+        "elevator_trolley": 26.75,
+        "pump_truck": 190.40,
+        # _____WORK FORCE_____
+        "shuttering_officer": 22.27,
+        "shutterin_helper": 21.15,
+        "iron_worker_officer": 22.27,
+        "iron_worker_helper": 21.15,
+        "concrete_manufacturer_officer": 22.27,
+        "concrete_manufacturer_helper": 21.15,
+        "steel_manufacturer_officer": 22.27,
+        "steel_manufacturer_helper": 21.15
+    }
+
     def __init__(self, l):
 
         height = l / self.length_fraction  # first h aproximation
@@ -1446,6 +1548,479 @@ class reinforcedHiperBeam:
             else:
                 return "NOT OK"
 
+class posTensionedSlab:
+
+    fck = 35
+    fckt = 24.7
+    fctm = 3.2
+    fctmt = 2.4
+    Ect = 31300
+    Ec = 34000
+    Phi = 2  # creep coeffitient
+    eps_cd0 = 0.00041  # initial shrinkage strain
+    reca = 40  # concrete cover of the active reinforcement
+    # Active steel properties
+    fpk = 1860
+    # fpd = 1617.391
+    fbpt = 4.8
+    Ep = 195000
+    #  Passive steel properties
+    fyk = 500
+    Es = 200000
+    recp = 30  # passive reinforcement concrete cover
+    # load at transfer N/mm2
+    construction = 1
+    # full loads N/mm
+    selfweight = 0
+    partwalls = 1
+    use_load = 0
+    flooring = 1.5
+    # instatant losses
+    nu = 0.19
+    gamma = 0.75 * 1e-5
+    # tendoms
+    tendoms = {
+        12.7: 98.74,
+        15.2: 140
+    }
+
+    # ducts D:area
+    ducts = {
+        60: 2400,
+        75: 3800,
+        85: 5000,
+        95: 6400,
+        105: 7900,
+        120: 10400,
+        130: 12300,
+        145: 15400
+    }
+    # bars D:area
+    bars = {
+        6: 28.27,
+        8: 50.27,
+        10: 78.54,
+        12: 113.10,
+        14: 153.94,
+        16: 201.06,
+        20: 314.16,
+        25: 490.87,
+        32: 804.25,
+        40: 1256.64
+    }
+    length_fraction = 32
+
+    unitprices = {
+        # _____MATERIALS_____
+        "wooden_board (m2)": 45.50,
+        "formwork_girders (m2)": 185,
+        "strut (Ud)": 26.47,
+        "reinfSteel (kg)": 1.6,
+        "concrete (m3)": 90.21,
+        "preten_steel (kg)": 0,  # included PP of jacks,ducts,anchorages...
+        # _____EQUIPMENT_____
+        "elevator_trolley": 26.75,
+        "pump_truck": 190.40,
+        # _____WORK FORCE_____
+        "shuttering_officer": 22.27,
+        "shutterin_helper": 21.15,
+        "iron_worker_officer": 22.27,
+        "iron_worker_helper": 21.15,
+        "concrete_manufacturer_officer": 22.27,
+        "concrete_manufacturer_helper": 21.15,
+        "steel_manufacturer_officer": 22.27,
+        "steel_manufacturer_helper": 21.15
+    }
+
+    def __init__(self, l):
+
+        self.l = l  # l/d will need checking and recalculations
+        height = int(l / (self.length_fraction * 50)) * 50
+        if height < l / self.length_fraction:
+            self.h = height + 50
+        else:
+            self.h = height
+
+        width = int(self.l / 100) * 50
+        if width < (self.l / 2):
+            self.b = width + 50
+        else:
+            self.b = width
+
+        self.e = self.h / 2 - (self.reca + list(self.ducts.keys())[0] / 2)
+        self.dp = self.h / 2 + self.e
+        self.ds1 = self.h + self.recp
+
+        self.Ab = self.h * self.b  # gross cross section
+        self.Wb = self.h ** 2 * self.b / 6  # gross section modulus
+        self.I = self.b * self.h ** 3 / 12  # gross moment of inertia
+        self.selfweight = self.Ab * 24 * 1e-6
+
+        # N/mm
+        if self.l >= 7000:
+            self.use_load = 5
+        else:
+            self.use_load = 2
+
+        self.charac_load = 1.35 * (self.selfweight + self.partwalls + self.flooring) + 1.5 * self.use_load
+        self.frec_transfer_load = self.selfweight + + self.flooring + self.construction * 0.7
+        self.frec_full_load = self.selfweight + self.flooring + self.partwalls + 0.7 * self.use_load
+        self.almostper_load = self.selfweight + self.flooring + self.partwalls + 0.6 * self.use_load
+
+        # ______ Max negative Moment_____
+        self.Mi_neg = self.frec_transfer_load * self.l ** 2 / 10  # Max initial moment under loads at transfer.
+        self.Mf_neg = self.frec_full_load * self.l ** 2 / 10  # Max moment under full loads.
+        self.Me_neg = self.almostper_load * self.l ** 2 / 10  # Max moment under almost permanent loads
+        self.Mu_neg = 3 * self.charac_load * self.l ** 2 / 40  # Max negative moment under characteristic load.
+        self.Mu_pos = 7 * self.charac_load * self.l ** 2 / 80  # Max positive moment under characteristic load.
+        self.Wmin = (1.1 * self.Mf_neg - 0.9 * self.Mi_neg) / (0.54 * self.fckt + 1.1 * self.fctm)
+
+        # _____ Max positive Moment_____
+        self.Mi_pos = self.Mi_neg / 2  # Max initial moment under loads at transfer.
+        self.Mf_pos = self.Mf_neg / 2  # Max moment under full loads.
+        self.Me_pos = self.Me_neg / 2  # Max moment under almost permanent loads
+        self.Mu_pos = self.Mu_neg / 2  # Max moment under characteristic load.
+
+        # _____ Max middle span Moment____
+
+        ho = self.Ab / (self.h + self.b)
+        kh = 0
+
+        if ho <= 200:
+            kh = 1
+        elif 200 < ho and ho <= 300:
+            kh = 0.85
+        elif 300 < ho and ho <= 500:
+            kh = 0.75
+        elif ho > 500:
+            kh = 0.7
+
+        betha_ds = 23 / (23 * 0.04 * ((ho) ** 3) ** 0.5)
+
+        # eps_cd = kh * betha_ds * self.eps_cd0  # drying strain
+        eps_cd = kh * self.eps_cd0
+        # eps_ca = betha_ds * 2.5 * (self.fck - 10) * (10 ** -6)  # shrinkage strain
+        eps_ca = 2.5 * (self.fck - 10) * (10 ** -6)
+        self.eps_cs = eps_cd + eps_ca  # total shrinkage strain
+
+        if self.l < 7:
+            self.unitprices["preten_steel"] = 5.40
+        elif self.l >= 7 and l <=10:
+            self.unitprices["preten_steel"] = 7.02
+        elif self.l > 10:
+            self.unitprices["preten_steel"] = 8.64
+    def __str__(self) -> str:
+        text = f"PSlab{self.l / 1000}"
+        return text
+
+    @staticmethod
+    def aprox(value, div):
+        """
+        aproximate any continuous value to a set of discrete equally spaced values.
+        :param value: value is the value you want to aproximate to an infinite set of discrete equally spaced values
+        :param div: is the distance between those discrete values
+        :return: the value within the set just above it
+        """
+        a = int(value / div) * div
+        a += div
+        return a
+
+    def Pmin(self):  # Magnel diagram
+        # Pmin will always be determined by the intersection of lines 4 (tension under full loads) and P*e
+        Pmin = (-self.fctm * self.Wb / 0.9 + self.Mf_pos / 0.9) * (1 / (self.e + self.h / 6))
+        return Pmin
+
+    def Pmax(self):  # Magnel diagram
+        Pmax = 0
+        # Pmax will be the minimun between the intersection of both lines 1 and 2 with P*e
+        Pmax1 = (self.fctmt * self.Wb / 1.1 + self.Mi_pos / 1.1) * (1 / (self.e - self.h / 6))
+        Pmax2 = (0.6 * self.fckt * self.Wb / 1.1 + self.Mi_pos / 1.1) * (1 / (self.e + self.h / 6))
+
+        if Pmax1 > 0 and Pmax2 > 0:
+            Pmax = min(Pmax1, Pmax2)
+        elif Pmax1 < 0:
+            Pmax = Pmax2
+        elif Pmax2 < 0:
+            Pmax = Pmax1
+        return Pmax
+
+    def equivalentLoad(self, P):
+        # __ MIDDLE SPAN EQUIVALENTE LOAD
+        k_mid = 10 * self.e / self.l ** 2  # assuming M(x) = 0 at l/5 from middle support
+        k_sup = 40 * self.e / self.l ** 2
+        qeqv_mid = P * k_mid
+        qeqv_sup = P * k_sup  # remember: equivalent load over supports is positive and negative over spans.
+        return qeqv_mid, qeqv_sup
+
+    def sectionHomo(self, Ap, As1=0, d1=0, As2=0, d2=0):
+        # As1 and As2 are the bottom and top passive reinforcement areas
+        np = self.Ep / self.Ec
+        ns = self.Es / self.Ec
+        Ah = self.b * self.h + (np - 1) * Ap + (ns - 1) * (As1 + As2)  # homogeneous cross section
+        # position of the centroid from top fibre
+        y = (self.h / 2 * (self.h * self.b) + self.dp * (ns - 1) * Ap + d1 * (ns - 1) * As1 + d2 * (ns - 1) * As2) / Ah
+        Ih = self.b * self.h ** 3 / 12 + Ap * (np - 1) * self.dp ** 2 + d1 ** 2 * (ns - 1) * As1 + d2 ** 2 * (
+                    ns - 1) * As2
+        return Ah, y, Ih  # Homogenized cross section, neutral plane, depth homogenized inertia.
+
+    def instantLosses(self, P, Ap):  # nu and gamma are the frictión coef2 * theta_sup + 2 * theta_mid + 2 * theta_extficient and involuntary curvature respectively
+        # assuming M(x) = 0 at l/5 from middle support
+        theta_ext = 10 * self.e / self.l  # angular change in extreme spans
+        theta_mid = 40 / 3 * self.e / self.l
+        theta_sup = 20 * self.e / self.l
+
+        delta_Pfric = P * (1 - math.exp(-self.nu * (2 * theta_sup + theta_mid + 2 * theta_ext + self.gamma * 3 * self.l)))  # Friction losses
+        # Losses caused by concrete´s elastic shortening
+        delta_shortConcrete = self.Ep / self.Ect * (P / self.Ab + P * self.e ** 2 / self.I) * Ap
+
+        # from l > 7m postensioned is applied from both sides
+        if self.l < 7000:
+            #  alpha is two times the friction losses slope
+            alpha = 2 * delta_Pfric / (3 * self.l)
+            L_c = math.sqrt(2 * 3 * self.Ep * Ap / alpha)
+
+        else:
+            delta_Pfric = P * (1 - math.exp(
+                -self.nu * (1 * theta_sup + 0.5 * theta_mid + 1 * theta_ext + self.gamma * 1.5 * self.l)))  # Friction losses
+            alpha = 2 * delta_Pfric / (1.5 * self.l)
+            L_c = math.sqrt(2 * 3 * self.Ep * Ap / alpha)
+
+        delta_Pjack = alpha * L_c
+        # losses in the active jack.
+        instantLosses = delta_Pfric + delta_shortConcrete + delta_Pjack
+        return instantLosses
+
+    def timedepLosses(self, P, Ap, areahomo, depthhomo, inertiahomo):
+
+        relaxation = 0
+        # calculate stress with Ep*epsp calculate eps with the gross cross section and multiply by 2,9 to account for relaxation
+        initial_tension = self.Ep / self.Ec * (- P / areahomo - (P * self.e ** 2 + self.Me_pos * self.e) / inertiahomo)
+        initial_tension = abs(initial_tension)
+
+        if initial_tension >= .6 * self.fpk:
+            relaxation = .015
+        elif initial_tension >= 0.7 * self.fpk:
+            relaxation = .025
+        elif initial_tension >= .8 * self.fpk:
+            relaxation = .045
+
+        sigma_pr = initial_tension * (1 - 3 * relaxation)
+        sigma_cQp = initial_tension / self.Ep
+
+        numerator = Ap * self.eps_cs * self.Ep + .8 * abs(initial_tension - sigma_pr) + self.Ep / self.Ec * self.Phi * sigma_cQp
+        denominator = 1 + self.Ep * Ap / (self.Ec * self.Ab) * (1 + self.Ab / self.I * depthhomo ** 2) * (1 + .8 * self.Phi)
+
+        timedepLosses = numerator / denominator
+        return timedepLosses
+
+    def Ap(self, P):
+        Apin = 10
+        Apout = 0
+
+        while True:  # reference value.
+            Apout = self.instantLosses(P, Apin) / (0.1 * self.fpk)
+
+            if abs(Apout - Apin) > 1:
+                Apin = Apout
+                continue
+            else:
+                break
+
+        return Apout
+
+    def checkELUpos(self, Ap, As1=0, As2=0):
+
+        prevAs1 = As1  # this variables will only be used if M_front < Mu
+        prevAs2 = As2
+
+        x = 1.5 * (Ap * self.fpk + As1 * self.fyk - As2 * self.fyk) / (
+                1.15 * .8 * self.b * self.fck)  # check where the neutral fibre is countting on the existing Ap
+        M_front = Ap * self.fpk / 1.15 * self.dp + As1 * self.fyk / 1.15 * (self.h - self.recp) \
+                  - As2 * self.fyk * self.recp - 0.32 * x ** 2 * self.b * self.fck / 1.5
+        # Moment generated by the current reinforcement after yielding
+
+        if M_front < self.Mu_pos:  # check if ELU moment is bigger than the beam´s strenght
+
+            while self.Mu_pos - M_front > 0:
+
+                increAs1 = (self.Mu_pos - M_front) * 1.15 / (
+                        (self.h - self.recp) * self.fyk)  # passive reinforcement necessary
+                prevAs1 += increAs1
+                x = 1.5 * (Ap * self.fpk + prevAs1 * self.fyk - prevAs2 * self.fyk) / (
+                        1.15 * .8 * self.b * self.fck)  # recalculate neutral fibre.
+
+                if x / self.dp > 0.335:  # postensioned strain needs to be checked.
+                    increAs2 = increAs1  # increment in top reinforecemnt is equal to the difference between
+                    # the current As1 and the previus value for As1.
+                    prevAs2 += increAs2
+
+                M_front = Ap * self.fpk / 1.15 * self.dp + prevAs1 * self.fyk / 1.15 * (
+                            self.h - self.recp) - prevAs2 * self.fyk * self.recp / 1.15 - 0.32 * x ** 2 * self.b * self.fck / 1.5
+
+        return prevAs1, prevAs2
+
+    def checkELUneg(self, Ap, As1=0, As2=0):
+
+        prevAs1 = As1  # this variables will only be used if M_front < Mu
+        prevAs2 = As2
+
+        x = 1.5 * (Ap * self.fpk + As1 * self.fyk - As2 * self.fyk) / (
+                1.15 * .8 * self.b * self.fck)  # check where the neutral fibre is countting on the existing Ap
+        M_front = Ap * self.fpk / 1.15 * self.dp + As1 * self.fyk / 1.15 * (self.h - self.recp) \
+                  - As2 * self.fyk * self.recp - 0.32 * x ** 2 * self.b * self.fck / 1.5
+        # Moment generated by the current reinforcement after yielding
+
+        if M_front < self.Mu_neg:  # check if ELU moment is bigger than the beam´s strenght
+
+            while self.Mu_neg - M_front > 0:
+
+                increAs1 = (self.Mu_neg - M_front) * 1.15 / (
+                        (self.h - self.recp) * self.fyk)  # passive reinforcement necessary
+                prevAs1 += increAs1
+                x = 1.5 * (Ap * self.fpk + prevAs1 * self.fyk - prevAs2 * self.fyk) / (
+                        1.15 * .8 * self.b * self.fck)  # recalculate neutral fibre.
+
+                if x / self.dp > 0.335:  # postensioned strain needs to be checked.
+                    increAs2 = increAs1  # increment in top reinforecemnt is equal to the difference between
+                    # the current As1 and the previus value for As1.
+                    prevAs2 += increAs2
+
+                M_front = Ap * self.fpk / 1.15 * self.dp + prevAs1 * self.fyk / 1.15 * (
+                        self.h - self.recp) - prevAs2 * self.fyk * self.recp / 1.15 - 0.32 * x ** 2 * self.b * self.fck / 1.5
+
+        return prevAs1, prevAs2  # remember that prevAs1 is tensidoned reinforcement
+
+    def CEcrack(self, Ap, As1):
+            phi = 0
+            m = 0
+
+            for bar in self.bars:
+                m = As1 / self.bars[bar]
+                m = self.aprox(m, 1)
+
+                if (2 * self.recp + m * bar + (m - 1) * 20) > self.b:
+                    continue
+                else:
+                    phi = bar
+                    break
+
+            phi_w = 0  # wire diameter
+            Ap_list = []
+
+            for tendom in self.tendoms:
+                t = Ap / self.tendoms[tendom]
+                t = self.aprox(t, 1)
+                a = (t * self.tendoms[tendom] - Ap)
+                Ap_list.append(a)
+
+            if Ap_list[0] <= Ap_list[1]:
+                phi_w = 4.24
+            elif Ap_list[0] > Ap_list[1]:
+                phi_w = 5.05
+
+            Xi_1 = math.sqrt(0.5 * phi /(1.75 * phi_w))
+            h_Cr = min(2.5 * self.reca, self.h / 2, (0.65 * self.h + 0.35 * self.reca) / 3)
+            A_ceff = self.b * h_Cr
+            rho_peff = (As1 + Xi_1 * Ap) / A_ceff
+            s_r = 3.4 * self.reca + 1.6 * 0.5 * 0.425 * phi / rho_peff
+
+            eps_c = -1 * 0.6 * self.fck / self.Ec
+            # eps_p1 = P / (self.Ep * Ap)
+            # eps_p2 = 1 / self.Ec * (P / self.Ab + P * self.e ** 2 / self.I)
+            eps_p3 = -eps_c * (self.dp / (self.h - h_Cr) - 1)
+            sigma_s = self.Ep * eps_p3
+
+            alpha_e = self.Ep / self.Ec
+            diff_eps = (sigma_s - 0.4 * self.fctm / rho_peff * (1 + alpha_e * rho_peff)) / self.Es
+            lim = 0.6 * sigma_s / self.Es
+
+            if diff_eps < lim:
+                diff_eps = lim
+
+            w_k = s_r * diff_eps
+
+            if w_k < 0.2:
+                return "OK"
+            else:
+                return "NOT OK"
+
+    def CEdeflect(self, P, Ap, As1, As2, inertiahomo):
+        rho = (As1 + Ap) / self.Ab
+        rho_ = As2 / self.Ab
+        rho_0 = 1e-3 * math.sqrt(self.fck)
+        a = rho_0 / rho
+        b = rho_0 / (rho - rho_)
+        K = 1
+        ld = 0
+        ld_0 = self.l / self.ds1
+        eqL = self.equivalentLoad(P)
+        M = self.Me_pos - eqL[0] * pow(self.l, 2) / 20.0
+
+        if rho <= rho_0:
+            ld = K * (11 + 1.5 * math.sqrt(self.fck) * a + 3.2 * math.sqrt(self.fck) * pow(a - 1, 3 / 2))
+        else:
+            ld = K * (11 + 1.5 * math.sqrt(self.fck) * b + 1 / 12 * math.sqrt(self.fck * rho_ / rho_0))
+
+        if ld_0 <= ld:
+            return "OK"
+        else:
+            ns = self.Es / self.Ec
+            np = self.Ep / self.Ec
+            m = rho_ / rho
+
+            # NO CRACKED SECTION IS CONSIDERED
+            # if rho_ != 0:
+            #     xd = np * rho * (1 + m) * (
+            #         -1 + math.sqrt(1 + 2 * (1 + m * self.recp / self.ds1) / (
+            #         np * rho * (1 + m) ** 2 ))) # Cracked inertia from centroid
+            # else:
+            #     xd = np * rho * (-1 + math.sqrt(1 + 2 / (np * rho)))
+
+            # x = xd * self.ds1
+            # I_f = ns * As1 * (self.ds1 - x) * (self.ds1 - x / 3) + ns * As2 * (
+            #     x - self.recp) * (x / 3 - self.recp) + np * Ap * (self.dp - x) * (
+            #     self.dp - x / 3)
+            Qs = As1 * self.h / 2  # reinforcement´s first moment of inertia  from uncracked section´s centroid
+            # Qsf = As1 * (self.ds1 - x)  # reinforcement´s first moment of inertia from cracked section´s centroid
+
+            Eceff = self.Ec / (1 + self.Phi)
+            # Mf = self.Wb * self.fctm
+            # Xi = 1 - 0.5 * (Mf / M) ** 2
+            Xi = 0
+            ke = M / (Eceff * inertiahomo)
+            # kf = M / (Eceff * I_f)
+            kcs = self.eps_cs * np * Qs / self.I
+            # kcsf = self.eps_cs * np * Qsf / I_f
+            # k = Xi * (kf + kcsf) + (1 - Xi) * (ke + kcs)
+            k = (1 - Xi) * (ke + kcs)
+
+            deflection = k * 5 / 48 * self.l ** 2
+
+            if deflection < self.l / 400:
+                return "OK"
+            else:
+                return "NOT OK"
+
+    def cost(self, Ap, As1, As2):
+        vol_concrete = pow(self.l * 3, 2) * self.h
+    # steel kg
+        l_ext = 4 * self.l / 5
+        l_mid = 3 * self.l / 5
+        l_sup = 2 * self.l / 5
+        s_ext = math.atan(4 * self.e / l_ext) * l_ext ** 2 / (8 * self.e)
+        s_int = math.atan(4 * self.e / l_mid) * l_mid ** 2 / (8 * self.e)
+        s_sup = math.atan(4 * self.e / l_sup) * l_sup ** 2 / (8 * self.e)
+        weight_Psteel = Ap * (s_ext * 2 + s_int + s_sup * 2) * 6 * 7850
+        weight_Rsteel_pos = As1 * (self.l * 3 ) * 1.1 * 6 * 7850
+        weight_Rsteel_neg = As2 * 1.8 * self.l * 6 * 7850
+    # form work
+        slab_suf = pow(3 * self.l, 2)
+        n_strut = int(slab_suf) + 1
+
+    # concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
+
+
+
 class costBeams:
 
     unitprices = {
@@ -1479,6 +2054,7 @@ class costBeams:
         elif l > 10:
             self.unitprices["preten_steel"] = 8.64
 
+
 if __name__ == "__main__":
     # viga = posTensionedIsoBeam(25000)
     # Pmin = viga.Pmin()
@@ -1496,17 +2072,30 @@ if __name__ == "__main__":
     # sectionhomo = viga2.sectionHomo(As[0], As[1])
     # print(viga2.CEdeflect(As[0], As[1], sectionhomo[2]))
 
-    viga3 = posTensionedHiperBeam(10000)
-    Pmin = viga3.Pmin()
-    Pmax = viga3.Pmax()
-    Ap = viga3.Ap(Pmin)
-    sectionHomo = viga3.sectionHomo(Ap)
-    instLosses = viga3.instantLosses(Pmin, Ap)
-    timedepLosses = viga3.timedepLosses(Pmin,Ap, sectionHomo[0], sectionHomo[1],sectionHomo[2])
-    ElUpos = viga3.checkELUpos(Ap)
-    ElUneg = viga3.checkELUneg(Ap)
+    # viga3 = posTensionedHiperBeam(10000)
+    # Pmin = viga3.Pmin()
+    # Pmax = viga3.Pmax()
+    # Ap = viga3.Ap(Pmin)
+    # sectionHomo = viga3.sectionHomo(Ap)
+    # instLosses = viga3.instantLosses(Pmin, Ap)
+    # timedepLosses = viga3.timedepLosses(Pmin,Ap, sectionHomo[0], sectionHomo[1],sectionHomo[2])
+    # ElUpos = viga3.checkELUpos(Ap)
+    # ElUneg = viga3.checkELUneg(Ap)
     # crackedpos = viga3.CEcrack(Ap, ElUpos[0])
     # crackedneg = viga3.CEcrack(Ap, ElUneg[0])
+
+    slab1 = posTensionedSlab(10000)
+    Pmin = slab1.Pmin()
+    Ap = slab1.Ap(Pmin)
+    sectionHomo = slab1.sectionHomo(Ap)
+    instLosses = slab1.instantLosses(Pmin, Ap)
+    timedepLosses = slab1.timedepLosses(Pmin, Ap, sectionHomo[0], sectionHomo[1],sectionHomo[2])
+    ElUpos = slab1.checkELUpos(Ap)
+    ElUneg = slab1.checkELUneg(Ap)
+    crakedpos = slab1.CEcrack(Ap, ElUpos[0])
+    crackedneg = slab1.CEcrack(Ap, ElUneg[0])
+
+
 
     print(f"Ap {Ap}")
     print(f"Pmin {Pmin}")

@@ -251,6 +251,8 @@ class HiperreinforecedBeamApp:
         print(rdf)
 
 
+
+
 if __name__ == "__main__":
     """ 
     hay algún problema con la fisuración en ambas vigas, a mayor canto se produce mayor fisuración lo que parece
