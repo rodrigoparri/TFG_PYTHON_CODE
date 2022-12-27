@@ -306,8 +306,10 @@ class posTensionedIsoBeam:
 
     def instantLosses(self, P, Ap):  # nu and gamma are the frictión coefficient and involuntary curvature respectively
         delta_Pfric = P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l ** 2 + self.gamma)))  # Friction losses
+
         delta_shortConcrete = self.Ep / self.Ect * (
                 P / self.Ab + P * self.e ** 2 / self.I) * Ap  # Losses caused by concrete´s elastic shortening
+
         alpha = 2 * P * (1 - math.exp(-self.nu * self.l * (8 * self.e / self.l ** 2 + self.gamma))) / self.l
         L_c = math.sqrt(2 * 3 * self.Ep * Ap / alpha)
         # delta_Pjack = math.sqrt(2 * 3 * alpha * self.Ep * Ap)
@@ -866,14 +868,13 @@ class posTensionedHiperBeam:
         self.Mf_neg = self.frec_full_load * self.l ** 2 / 10  # Max moment under full loads.
         self.Me_neg = self.almostper_load * self.l ** 2 / 10  # Max moment under almost permanent loads
         self.Mu_neg = 3 * self.charac_load * self.l ** 2 / 40  # Max negative moment under characteristic load.
-        self.Mu_pos = 7 * self.charac_load * self.l ** 2 / 80  # Max positive moment under characteristic load.
         self.Wmin = (1.1 * self.Mf_neg - 0.9 * self.Mi_neg) / (0.54 * self.fckt + 1.1 * self.fctm)
 
 # _____ Max positive Moment_____
         self.Mi_pos = self.Mi_neg / 2  # Max initial moment under loads at transfer.
         self.Mf_pos = self.Mf_neg / 2  # Max moment under full loads.
         self.Me_pos = self.Me_neg / 2  # Max moment under almost permanent loads
-        self.Mu_pos = self.Mu_neg / 2  # Max moment under characteristic load.
+        self.Mu_pos = 7 * self.charac_load * self.l ** 2 / 80  # Max positive moment under characteristic load.
 
 # _____ Max middle span Moment____
 
@@ -1569,12 +1570,12 @@ class posTensionedSlab:
     Es = 200000
     recp = 30  # passive reinforcement concrete cover
     # load at transfer N/mm2
-    construction = 1
-    # full loads N/mm
+    construction = 1 * 1e-3
+    # full loads N/mm2
     selfweight = 0
-    partwalls = 1
+    partwalls = 1 * 1e-3
     use_load = 0
-    flooring = 1.5
+    flooring = 1.5 * 1e-3
     # instatant losses
     nu = 0.19
     gamma = 0.75 * 1e-5
@@ -1654,34 +1655,32 @@ class posTensionedSlab:
         self.Ab = self.h * self.b  # gross cross section
         self.Wb = self.h ** 2 * self.b / 6  # gross section modulus
         self.I = self.b * self.h ** 3 / 12  # gross moment of inertia
-        self.selfweight = self.Ab * 24 * 1e-6
+        self.selfweight = self.h * 24 * 1e-6  # N/mm2
 
         # N/mm
         if self.l >= 7000:
-            self.use_load = 5
+            self.use_load = 5 * 1e-3
         else:
-            self.use_load = 2
+            self.use_load = 2 * 1e-3
 
-        self.charac_load = 1.35 * (self.selfweight + self.partwalls + self.flooring) + 1.5 * self.use_load
-        self.frec_transfer_load = self.selfweight + + self.flooring + self.construction * 0.7
-        self.frec_full_load = self.selfweight + self.flooring + self.partwalls + 0.7 * self.use_load
-        self.almostper_load = self.selfweight + self.flooring + self.partwalls + 0.6 * self.use_load
+        self.charac_load = (1.35 * (self.selfweight + self.partwalls + self.flooring) + 1.5 * self.use_load) * self.b
+        self.frec_transfer_load = (self.selfweight + + self.flooring + self.construction * 0.7) * self.b
+        self.frec_full_load = (self.selfweight + self.flooring + self.partwalls + 0.7 * self.use_load) * self.b
+        self.almostper_load = (self.selfweight + self.flooring + self.partwalls + 0.6 * self.use_load) * self.b
 
         # ______ Max negative Moment_____
         self.Mi_neg = self.frec_transfer_load * self.l ** 2 / 10  # Max initial moment under loads at transfer.
         self.Mf_neg = self.frec_full_load * self.l ** 2 / 10  # Max moment under full loads.
         self.Me_neg = self.almostper_load * self.l ** 2 / 10  # Max moment under almost permanent loads
         self.Mu_neg = 3 * self.charac_load * self.l ** 2 / 40  # Max negative moment under characteristic load.
-        self.Mu_pos = 7 * self.charac_load * self.l ** 2 / 80  # Max positive moment under characteristic load.
+
         self.Wmin = (1.1 * self.Mf_neg - 0.9 * self.Mi_neg) / (0.54 * self.fckt + 1.1 * self.fctm)
 
         # _____ Max positive Moment_____
         self.Mi_pos = self.Mi_neg / 2  # Max initial moment under loads at transfer.
         self.Mf_pos = self.Mf_neg / 2  # Max moment under full loads.
         self.Me_pos = self.Me_neg / 2  # Max moment under almost permanent loads
-        self.Mu_pos = self.Mu_neg / 2  # Max moment under characteristic load.
-
-        # _____ Max middle span Moment____
+        self.Mu_pos = 7 * self.charac_load * self.l ** 2 / 80  # Max positive moment under characteristic load.
 
         ho = self.Ab / (self.h + self.b)
         kh = 0
@@ -1712,6 +1711,24 @@ class posTensionedSlab:
     def __str__(self) -> str:
         text = f"PSlab{self.l / 1000}"
         return text
+
+    def properties(self):
+
+        Properties = {
+        "h": self.h,
+        "b": self.b,
+        "e" : self.e,
+        "I" : self.I,
+        "Mf_neg" : self.Mf_neg,
+        "Me_neg" : self.Me_neg,
+        "Mi_neg" : self.Mi_neg,
+        "Mu_neg" : self.Mu_neg,
+        "Mi_pos" : self.Mi_pos,
+        "Mf_pos" : self.Mf_pos,
+        "Me_pos" : self.Me_pos,
+        "Mu_pos" : self.Mu_pos
+        }
+        return Properties
 
     @staticmethod
     def aprox(value, div):
@@ -2011,15 +2028,15 @@ class posTensionedSlab:
         s_int = math.atan(4 * self.e / l_mid) * l_mid ** 2 / (8 * self.e)
         s_sup = math.atan(4 * self.e / l_sup) * l_sup ** 2 / (8 * self.e)
         weight_Psteel = Ap * (s_ext * 2 + s_int + s_sup * 2) * 6 * 7850
-        weight_Rsteel_pos = As1 * (self.l * 3 ) * 1.1 * 6 * 7850
+        weight_Rsteel_pos = As1 * (self.l * 3) * 1.1 * 6 * 7850
         weight_Rsteel_neg = As2 * 1.8 * self.l * 6 * 7850
     # form work
         slab_suf = pow(3 * self.l, 2)
         n_strut = int(slab_suf) + 1
 
-    # concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
+        concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
 
-
+        return concreteCost
 
 class costBeams:
 
@@ -2085,6 +2102,7 @@ if __name__ == "__main__":
     # crackedneg = viga3.CEcrack(Ap, ElUneg[0])
 
     slab1 = posTensionedSlab(10000)
+    # print(slab1.properties())
     Pmin = slab1.Pmin()
     Ap = slab1.Ap(Pmin)
     sectionHomo = slab1.sectionHomo(Ap)
@@ -2094,8 +2112,7 @@ if __name__ == "__main__":
     ElUneg = slab1.checkELUneg(Ap)
     crakedpos = slab1.CEcrack(Ap, ElUpos[0])
     crackedneg = slab1.CEcrack(Ap, ElUneg[0])
-
-
+    # cost = slab1.cost(Apm, ElUpos[0] + ElUneg[1], ElUpos[1] + ElUneg[0])
 
     print(f"Ap {Ap}")
     print(f"Pmin {Pmin}")
@@ -2106,5 +2123,6 @@ if __name__ == "__main__":
     print(timedepLosses / Pmin * 100)
     print(f"As_pos {ElUpos}")
     print(f"As_neg {ElUneg}")
-    # print(f"Cracked_pos {crackedpos}")
-    # print(f"Cracked_neg {crackedneg}")
+    print(f"Cracked_pos {crakedpos}")
+    print(f"Cracked_neg {crackedneg}")
+    # print(cost)
