@@ -1761,10 +1761,18 @@ class posTensionedSlab:
             Pmax = Pmax1
         return Pmax
 
+    def Pequiv(self, qeqv):
+        """ In case Pmin < 0, P will be calculated with this method.
+        :param qeqv is the equivalent load that is to be equilibrated
+        """
+        k_mid = 12.5 * self.e / self.l ** 2  # Curvature of the tendon at the extreme span
+        P = qeqv / k_mid
+        return P
+
     def equivalentLoad(self, P):
         # __ MIDDLE SPAN EQUIVALENTE LOAD
-        k_mid = 10 * self.e / self.l ** 2  # assuming M(x) = 0 at l/5 from middle support
-        k_sup = 40 * self.e / self.l ** 2
+        k_mid = 12.5 * self.e / self.l ** 2  # assuming M(x) = 0 at l/5 from middle support.
+        k_sup = 50 * self.e / self.l ** 2
         qeqv_mid = P * k_mid
         qeqv_sup = P * k_sup  # remember: equivalent load over supports is positive and negative over spans.
         return qeqv_mid, qeqv_sup
@@ -2101,7 +2109,7 @@ if __name__ == "__main__":
     # crackedpos = viga3.CEcrack(Ap, ElUpos[0])
     # crackedneg = viga3.CEcrack(Ap, ElUneg[0])
 
-    slab1 = posTensionedSlab(10000)
+    slab1 = posTensionedSlab(5000)
     # print(slab1.properties())
     Pmin = slab1.Pmin()
     Ap = slab1.Ap(Pmin)
