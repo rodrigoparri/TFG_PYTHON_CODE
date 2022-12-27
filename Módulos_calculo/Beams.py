@@ -1585,17 +1585,6 @@ class posTensionedSlab:
         15.2: 140
     }
 
-    # ducts D:area
-    ducts = {
-        60: 2400,
-        75: 3800,
-        85: 5000,
-        95: 6400,
-        105: 7900,
-        120: 10400,
-        130: 12300,
-        145: 15400
-    }
     # bars D:area
     bars = {
         6: 28.27,
@@ -1609,7 +1598,7 @@ class posTensionedSlab:
         32: 804.25,
         40: 1256.64
     }
-    length_fraction = 32
+    length_fraction = 39
 
     unitprices = {
         # _____MATERIALS_____
@@ -1648,7 +1637,7 @@ class posTensionedSlab:
         else:
             self.b = width
 
-        self.e = self.h / 2 - (self.reca + list(self.ducts.keys())[0] / 2)
+        self.e = self.h / 2 - (self.reca + 18 / 2)  # every flat duct´s height is 18mm
         self.dp = self.h / 2 + self.e
         self.ds1 = self.h + self.recp
 
@@ -1773,7 +1762,7 @@ class posTensionedSlab:
         # __ MIDDLE SPAN EQUIVALENTE LOAD
         k_mid = 12.5 * self.e / self.l ** 2  # assuming M(x) = 0 at l/5 from middle support.
         k_sup = 50 * self.e / self.l ** 2
-        qeqv_mid = P * k_mid
+        qeqv_mid = P * k_mid * 2
         qeqv_sup = P * k_sup  # remember: equivalent load over supports is positive and negative over spans.
         return qeqv_mid, qeqv_sup
 
@@ -2046,6 +2035,133 @@ class posTensionedSlab:
 
         return concreteCost
 
+class reinforcedSlab:
+
+
+    fck = 35
+    fctm = 3.2
+    Ec = 34000
+    Phi = 2  # creep coeffitient
+    eps_cd0 = 0.00041  # initial shrinkage strain
+    rec = 30  # concrete cover
+    #  Passive steel properties
+    fyk = 500
+    Es = 200000
+    # load at transfer N/mm2
+    construction = 1
+    # full loads N/mm
+    selfweight = 0
+    partwalls = 1
+    use_load = 0
+    flooring = 1.5
+    # bars D:area
+    bars = {
+        6: 28.27,
+        8: 50.27,
+        10: 78.54,
+        12: 113.10,
+        14: 153.94,
+        16: 201.06,
+        20: 314.16,
+        25: 490.87,
+        32: 804.25,
+        40: 1256.64
+    }
+    length_fraction = 21
+
+    unitprices = {
+        # _____MATERIALS_____
+        "wooden_board (m2)": 45.50,
+        "formwork_girders (m2)": 185,
+        "strut (Ud)": 26.47,
+        "reinfSteel (kg)": 1.6,
+        "concrete (m3)": 90.21,
+        "preten_steel": 0,  # included PP of jacks,ducts,anchorages...
+        # _____EQUIPMENT_____
+        "elevator_trolley": 26.75,
+        "pump_truck": 190.40,
+        # _____WORK FORCE_____
+        "shuttering_officer": 22.27,
+        "shutterin_helper": 21.15,
+        "iron_worker_officer": 22.27,
+        "iron_worker_helper": 21.15,
+        "concrete_manufacturer_officer": 22.27,
+        "concrete_manufacturer_helper": 21.15,
+        "steel_manufacturer_officer": 22.27,
+        "steel_manufacturer_helper": 21.15
+    }
+
+    def __init__(self, l):
+
+        height = l / self.length_fraction  # first h aproximation
+        haprox = int(height / 50) * 50
+
+        if haprox < height:
+            height = haprox + 50
+        else:
+            height = haprox
+
+        width = int(height * 2 / 150) * 50
+        if width < (height * 2 / 3):
+            self.b = width + 50
+        else:
+            self.b = width
+
+        self.l = l
+
+        self.Ab = height * self.b  # gross cross section
+        self.Wb = height ** 2 * self.b / 6  # gross section modulus
+        self.Wu = self.b * (height - self.rec) ** 2
+        self.I = self.b * height ** 3 / 12  # gross moment of inertia
+        self.selfweight = self.Ab * 24 * 1e-6
+
+        if self.l >= 7000:
+            self.use_load = 5
+        else:
+            self.use_load = 2
+
+        self.charac_load = 1.35 * (self.selfweight + self.partwalls + self.flooring) + 1.5 * self.use_load
+        self.almostper_load = self.selfweight + self.partwalls + self.flooring + 0.6 * self.use_load
+        self.Me_pos = self.almostper_load * self.l ** 2 / 20  # Max positive moment under almost permanent loads
+        self.Me_neg = self.almostper_load * self.l ** 2 / 10  # Max negative moment under almost permanent loads
+        self.Mu_pos = 7 * self.charac_load * self.l ** 2 / 80  # Max positive moment under characteristic load.
+        self.Mu_neg = 3 * self.charac_load * self.l ** 2 / 40  # Max negative moment under characteristic load.
+
+        hmin = self.Wmin(self.b)[1] + self.rec
+
+        if height < hmin:
+
+            self.h = self.aprox(height, 50)
+        else:
+            self.h = height
+
+        self.ds1 = self.h - self.rec
+
+        ho = self.Ab / (self.h + self.b)
+        kh = 0
+        # relaxation = 0
+
+        if ho <= 200:
+            kh = 1
+        elif 200 < ho and ho <= 300:
+            kh = 0.85
+        elif 300 < ho and ho <= 500:
+            kh = 0.75
+        elif ho > 500:
+            kh = 0.7
+
+        # betha_ds = 23 / (23 * 0.04 * ((ho) ** 3) ** 0.5)
+
+        # eps_cd = kh * betha_ds * self.eps_cd0  # drying strain
+        eps_cd = kh * self.eps_cd0
+        # eps_ca = betha_ds * 2.5 * (self.fck - 10) * (10 ** -6)  # shrinkage strain
+        eps_ca = 2.5 * (self.fck - 10) * (10 ** -6)
+        self.eps_cs = eps_cd + eps_ca  # total shrinkage strain
+
+    def __str__(self) -> str:
+        text = f"IsoRB{self.l / 1000}"
+        return text
+
 class costBeams:
 
     unitprices = {
@@ -2109,9 +2225,15 @@ if __name__ == "__main__":
     # crackedpos = viga3.CEcrack(Ap, ElUpos[0])
     # crackedneg = viga3.CEcrack(Ap, ElUneg[0])
 
-    slab1 = posTensionedSlab(5000)
+    slab1 = posTensionedSlab(6000)
     # print(slab1.properties())
     Pmin = slab1.Pmin()
+
+    # if Pmin is negative it will be replaced by de equivalent P necessary to equilibrate half of the self weight
+    if Pmin < 0:
+        Pmin = slab1.Pequiv(slab1.selfweight * slab1.b / 2)
+
+    Pmax = slab1.Pmax()
     Ap = slab1.Ap(Pmin)
     sectionHomo = slab1.sectionHomo(Ap)
     instLosses = slab1.instantLosses(Pmin, Ap)
@@ -2120,17 +2242,20 @@ if __name__ == "__main__":
     ElUneg = slab1.checkELUneg(Ap)
     crakedpos = slab1.CEcrack(Ap, ElUpos[0])
     crackedneg = slab1.CEcrack(Ap, ElUneg[0])
+    Ptotal = Pmin + instLosses + timedepLosses
+    deflect = slab1.CEdeflect(Ptotal, Ap, ElUpos[0], ElUneg[0], sectionHomo[2])
     # cost = slab1.cost(Apm, ElUpos[0] + ElUneg[1], ElUpos[1] + ElUneg[0])
 
     print(f"Ap {Ap}")
     print(f"Pmin {Pmin}")
-    # print(Pmax)
+    print(f"Pmax {Pmax}")
     print(f"InstantaLoses {instLosses}")
-    print(instLosses / Pmin * 100)
+    print(f"Relative instantLosses{instLosses / Pmin * 100}")
     print(f"TiemdepLoses {timedepLosses}")
-    print(timedepLosses / Pmin * 100)
+    print(f"Relative timedepLosses{timedepLosses / Pmin * 100}")
     print(f"As_pos {ElUpos}")
     print(f"As_neg {ElUneg}")
     print(f"Cracked_pos {crakedpos}")
     print(f"Cracked_neg {crackedneg}")
+    print((f"deflect {deflect}"))
     # print(cost)

@@ -144,7 +144,8 @@ class HiperpostBeamApp:
             As1_neg = NegReinf[0]
             As2_neg = NegReinf[1]
             CEcracked = self.HiperPBeams[instance].CEcrack(Ap, As1_pos)
-            CEdeflect = self.HiperPBeams[instance].CEdeflect(Pmin, Ap, As1_pos, As1_neg, sectHomo[2])
+            Ptotal = Pmin + instantlosses + timedeplosses
+            CEdeflect = self.HiperPBeams[instance].CEdeflect(Ptotal, Ap, As1_pos, As1_neg, sectHomo[2])
 
             beamcalc[instance] = (b,
                                   h,
@@ -250,14 +251,95 @@ class HiperreinforecedBeamApp:
         pd.set_option("display.max_columns", len(columnnames))
         print(rdf)
 
+class PostensionedSlabApp:
 
+    def __init__(self, limit, step):
+        self.PSlabs = {}
+
+        for length in self.lengen(limit, step):
+            self.PSlabs[str(Beams.posTensionedSlab(length))] = Beams.posTensionedSlab(length)
+
+    @staticmethod
+    def lengen(limit, step):  # method that generates the next length as it´s called
+
+        n = 5000
+        while n <= limit:
+            yield n
+            n += step
+
+    def SlabPcal(self):
+
+        slabcalc = {}
+
+        for instance in self.PSlabs:
+
+            b = self.PSlabs[instance].b
+            h = self. PSlabs[instance].h
+            e = self. PSlabs[instance].e
+            Pmin = self.PSlabs[instance].Pmin()
+
+            if Pmin < 0:
+                Pmin = self.PSlabs[instance].Pequiv(self.PSlabs[instance].selfweight * b / 8)
+
+            Pmax = self.PSlabs[instance].Pmax()
+            Ap = self.PSlabs[instance].Ap(Pmin)
+            Sh = self.PSlabs[instance].sectionHomo(Ap)
+            instLosses = self.PSlabs[instance].instantLosses(Pmin, Ap)
+            relinstLosses = instLosses / Pmin * 100
+            timedepLosses = self.PSlabs[instance].timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
+            reltimedepLosses = timedepLosses / Pmin * 100
+            posReinf = self.PSlabs[instance].checkELUpos(Ap)
+            negReinf = self.PSlabs[instance].checkELUneg(Ap)
+            As1_pos = posReinf[0]
+            As2_pos = posReinf[1]
+            As1_neg = negReinf[0]
+            As2_neg = negReinf[1]
+            CEcracked = self.PSlabs[instance].CEcrack(Ap, As1_pos)
+            Ptotal = Pmin + instLosses + timedepLosses
+            CEdeflect = self.PSlabs[instance].CEdeflect(Ptotal, Ap, As1_pos, As1_neg, Sh[2])
+
+            slabcalc[instance] = (b,
+                                  h,
+                                  e,
+                                  Pmin,
+                                  Pmax,
+                                  Ap,
+                                  instLosses,
+                                  relinstLosses,
+                                  timedepLosses,
+                                  reltimedepLosses,
+                                  As1_pos,
+                                  As2_pos,
+                                  As1_neg,
+                                  As2_neg,
+                                  CEcracked,
+                                  CEdeflect
+                                  )
+
+        columnnames = (
+            "b (mm)",
+            "h (mm)",
+            "e (mm)",
+            "Pmin (N)",
+            "Pmax (N)",
+            "Ap (mm2)",
+            "instant losses (N)",
+            " (%)",
+            "time dependent losses (N)",
+            " (%)", "As1_pos (mm2)",
+            "As2_pos (mm2)",
+            "As1_neg (mm2)",
+            "As2_neg (mm2)",
+            "CEcracked",
+            "Cedeflect"
+           )
+
+        pdf = pd.DataFrame.from_dict(slabcalc, orient="index", columns=columnnames)
+        pd.set_option("display.max_columns", len(columnnames))
+        print(pdf)
 
 
 if __name__ == "__main__":
-    """ 
-    hay algún problema con la fisuración en ambas vigas, a mayor canto se produce mayor fisuración lo que parece
-    sin sentido. 
-    """
 
     # App = IsopostBeamApp(25000, 1000)
     # App.IsoPcal()
@@ -265,8 +347,11 @@ if __name__ == "__main__":
     # App2 = IsoreinforcedBeamApp(25000, 1000)
     # App2.IsoRcal()
 
-    App3 = HiperpostBeamApp(25000, 1000)
-    App3.HiperPcal()
+    # App3 = HiperpostBeamApp(25000, 1000)
+    # App3.HiperPcal()
 
     # App3 = HiperreinforecedBeamApp(25000, 1000)
     # App3.HiperRcal()
+
+    App4 = PostensionedSlabApp(25000, 1000)
+    App4.SlabPcal()
