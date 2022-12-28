@@ -2062,7 +2062,7 @@ class reinforcedSlab:
         32: 804.25,
         40: 1256.64
     }
-    length_fraction = 21
+    length_fraction = 18
 
     unitprices = {
         # _____MATERIALS_____
@@ -2107,7 +2107,7 @@ class reinforcedSlab:
         self.Wb = height ** 2 * self.b / 6  # gross section modulus
         self.Wu = self.b * (height - self.rec) ** 2
         self.I = self.b * height ** 3 / 12  # gross moment of inertia
-        self.selfweight = self.Ab * 24 * 1e-6
+
 
         if self.l >= 7000:
             self.use_load = 5 * 1e-3
@@ -2128,6 +2128,8 @@ class reinforcedSlab:
             self.h = self.aprox(height, 50)
         else:
             self.h = height
+
+        self.selfweight = self.h * 24 * 1e-6
 
         self.ds1 = self.h - self.rec
 
@@ -2167,6 +2169,22 @@ class reinforcedSlab:
         a = int(value / div) * div
         a += div
         return a
+
+    def properties(self):
+        As_pos = self.As_pos()
+        As_neg = self.As_neg()
+        As_min = self.As_min()
+        sH = self.sectionHomo(As_pos[0], As_neg[0])
+        cracked_pos = self.CEcrack_pos(As_pos[0])
+        cracked_neg = self.CEcrack_neg(As_neg[0])
+        deflect = self.CEdeflect(As_pos[0], As_neg[0], sH[2])
+
+        print(As_pos)
+        print(As_neg)
+        print(As_min)
+        print(cracked_pos)
+        print(cracked_neg)
+        print(deflect)
 
     def Wmin(self, b=0):  # in this context W means bd^2
 
@@ -2218,24 +2236,40 @@ class reinforcedSlab:
 
         return prevAs1, prevAs2
 
-    def sectionHomo(self, As1=0, d1=0, As2=0, d2=0):
+    def As_min(self, y):
+        """
+        Minimum reinforecment steel area required to prevent cracking
+        :param y: nuetral plane depth just before cracking
+        :return:
+        """
+        k = 0
+        if self.h <= 300:
+            k = 1
+        elif self.h > 300 and self.h < 800:
+            k = 1 - 0.35 * (self.h - 300) / 500
+        elif self.h >= 800:
+            k = 0.65
+        As_min = 0.4 * k * self.fctm * (self.h - y) * self.b
+
+        return As_min
+
+    def sectionHomo(self, As1=0, As2=0):
         # As1 and As2 are the bottom and top passive reinforcement areas
         ns = self.Es / self.Ec
         Ah = self.b * self.h + (ns - 1) * (As1 + As2)  # homogeneous cross section
         # position of the centroid from top fibre
-        y = (self.h / 2 * (self.h * self.b) + d1 * (ns - 1) * As1 + d2 * (ns - 1) * As2) / Ah
-        Ih = self.b * self.h ** 3 / 12 + d1 ** 2 * (ns - 1) * As1 + d2 ** 2 * (
-                    ns - 1) * As2
-        return Ah, y, Ih  # Homogenized cross section, neutral plane, depth homogenized inertia.
+        y = (self.h / 2 * (self.h * self.b) + self.ds1 * (ns - 1) * As1 + self.rec * (ns - 1) * As2) / Ah
+        Ih = self.b * self.h ** 3 / 12 + self.ds1 ** 2 * (ns - 1) * As1 + self.rec ** 2 * (ns - 1) * As2
+        return Ah, y, Ih  # Homogenized cross section, neutral plane depth, homogenized inertia.
 
     def CEcrack_pos(self, As1):
         phi = 0
         m = 0
         for bar in self.bars:
-            m = As1 / self.bars[bar]
+            m = As1 / self.bars[bar]  # m is the number of bars
             m = self.aprox(m, 1)
 
-            if (2 * self.rec + m * bar + (m - 1) * 20) > self.b:
+            if (2 * self.rec + m * bar + (m - 1) * 10) > self.b:
                 continue
             else:
                 phi = bar
@@ -2414,38 +2448,52 @@ if __name__ == "__main__":
     # crackedneg = viga3.CEcrack(Ap, ElUneg[0])
 
 
-    slab1 = posTensionedSlab(6000)
+    # slab1 = posTensionedSlab(6000)
     # print(slab1.properties())
-    Pmin = slab1.Pmin()
+    # Pmin = slab1.Pmin()
 
     # if Pmin is negative it will be replaced by de equivalent P necessary to equilibrate half of the self weight
-    if Pmin < 0:
-        Pmin = slab1.Pequiv(slab1.selfweight * slab1.b / 2)
-
-    Pmax = slab1.Pmax()
-    Ap = slab1.Ap(Pmin)
-    sectionHomo = slab1.sectionHomo(Ap)
-    instLosses = slab1.instantLosses(Pmin, Ap)
-    timedepLosses = slab1.timedepLosses(Pmin, Ap, sectionHomo[0], sectionHomo[1],sectionHomo[2])
-    ElUpos = slab1.checkELUpos(Ap)
-    ElUneg = slab1.checkELUneg(Ap)
-    crakedpos = slab1.CEcrack(Ap, ElUpos[0])
-    crackedneg = slab1.CEcrack(Ap, ElUneg[0])
-    Ptotal = Pmin + instLosses + timedepLosses
-    deflect = slab1.CEdeflect(Ptotal, Ap, ElUpos[0], ElUneg[0], sectionHomo[2])
+    # if Pmin < 0:
+    #     Pmin = slab1.Pequiv(slab1.selfweight * slab1.b / 2)
+    #
+    # Pmax = slab1.Pmax()
+    # Ap = slab1.Ap(Pmin)
+    # sectionHomo = slab1.sectionHomo(Ap)
+    # instLosses = slab1.instantLosses(Pmin, Ap)
+    # timedepLosses = slab1.timedepLosses(Pmin, Ap, sectionHomo[0], sectionHomo[1],sectionHomo[2])
+    # ElUpos = slab1.checkELUpos(Ap)
+    # ElUneg = slab1.checkELUneg(Ap)
+    # crakedpos = slab1.CEcrack(Ap, ElUpos[0])
+    # crackedneg = slab1.CEcrack(Ap, ElUneg[0])
+    # Ptotal = Pmin + instLosses + timedepLosses
+    # deflect = slab1.CEdeflect(Ptotal, Ap, ElUpos[0], ElUneg[0], sectionHomo[2])
     # cost = slab1.cost(Apm, ElUpos[0] + ElUneg[1], ElUpos[1] + ElUneg[0])
 
 
-    print(f"Ap {Ap}")
-    print(f"Pmin {Pmin}")
-    print(f"Pmax {Pmax}")
-    print(f"InstantaLoses {instLosses}")
-    print(f"Relative instantLosses{instLosses / Pmin * 100}")
-    print(f"TiemdepLoses {timedepLosses}")
-    print(f"Relative timedepLosses{timedepLosses / Pmin * 100}")
-    print(f"As_pos {ElUpos}")
-    print(f"As_neg {ElUneg}")
-    print(f"Cracked_pos {crakedpos}")
-    print(f"Cracked_neg {crackedneg}")
-    print((f"deflect {deflect}"))
+    # print(f"Ap {Ap}")
+    # print(f"Pmin {Pmin}")
+    # print(f"Pmax {Pmax}")
+    # print(f"InstantaLoses {instLosses}")
+    # print(f"Relative instantLosses{instLosses / Pmin * 100}")
+    # print(f"TiemdepLoses {timedepLosses}")
+    # print(f"Relative timedepLosses{timedepLosses / Pmin * 100}")
+    # print(f"As_pos {ElUpos}")
+    # print(f"As_neg {ElUneg}")
+    # print(f"Cracked_pos {crakedpos}")
+    # print(f"Cracked_neg {crackedneg}")
+    # print((f"deflect {deflect}"))
     # print(cost)
+
+    slab2 = reinforcedSlab(5000)
+    As_pos = slab2.As_pos()
+    As_neg = slab2.As_neg()
+    sH = slab2.sectionHomo(As_pos[0] + As_neg[1], As_pos[1] + As_neg[0])
+    crack_pos = slab2.CEcrack_pos(As_pos[0])
+    crack_neg = slab2.CEcrack_neg(As_neg[0])
+    deflection = slab2.CEdeflect(As_pos[0], As_neg[0], sH[2])
+
+    print(As_pos)
+    print(As_neg)
+    print(crack_pos)
+    print(crack_neg)
+    print(deflection)
