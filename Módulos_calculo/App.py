@@ -330,27 +330,37 @@ class PostensionedSlabApp:
 
         for instance in self.PSlabs:
 
-            b = self.PSlabs[instance].b
-            h = self. PSlabs[instance].h
-            e = self. PSlabs[instance].e
+            b = self.PSlabs[instance].l / 2
+            h = self.PSlabs[instance].h
+            e = self.PSlabs[instance].e
+            n = self.PSlabs[instance].n
             Pmin = self.PSlabs[instance].Pmin()
+            Pmin_total = Pmin * n
 
             if Pmin < 0:
                 Pmin = self.PSlabs[instance].Pequiv(self.PSlabs[instance].selfweight * b / 8)
 
             Pmax = self.PSlabs[instance].Pmax()
+            Pmax_total = Pmax * n
             Ap = self.PSlabs[instance].Ap(Pmin)
+            Ap_total = Ap * n
             Sh = self.PSlabs[instance].sectionHomo(Ap)
             instLosses = self.PSlabs[instance].instantLosses(Pmin, Ap)
+            instLosses_total = instLosses * n
             relinstLosses = instLosses / Pmin * 100
             timedepLosses = self.PSlabs[instance].timedepLosses(Pmin, Ap, Sh[0], Sh[1], Sh[2])
+            timedepLosses_total = timedepLosses * n
             reltimedepLosses = timedepLosses / Pmin * 100
             posReinf = self.PSlabs[instance].checkELUpos(Ap)
             negReinf = self.PSlabs[instance].checkELUneg(Ap)
             As1_pos = posReinf[0]
+            As1_pos_total = As1_pos * n
             As2_pos = posReinf[1]
+            As2_pos_total = As2_pos * n
             As1_neg = negReinf[0]
+            As1_neg_total = As1_neg * n
             As2_neg = negReinf[1]
+            As2_neg_total = As2_neg * n
             CEcracked = self.PSlabs[instance].CEcrack(Ap, As1_pos)
             Ptotal = Pmin + instLosses + timedepLosses
             CEdeflect = self.PSlabs[instance].CEdeflect(Ptotal, Ap, As1_pos, As1_neg, Sh[2])
@@ -359,17 +369,17 @@ class PostensionedSlabApp:
             slabcalc[instance] = (b,
                                   h,
                                   e,
-                                  Pmin,
-                                  Pmax,
-                                  Ap,
-                                  instLosses,
+                                  Pmin_total,
+                                  Pmax_total,
+                                  Ap_total,
+                                  instLosses_total,
                                   relinstLosses,
-                                  timedepLosses,
+                                  timedepLosses_total,
                                   reltimedepLosses,
-                                  As1_pos,
-                                  As2_pos,
-                                  As1_neg,
-                                  As2_neg,
+                                  As1_pos_total,
+                                  As2_pos_total,
+                                  As1_neg_total,
+                                  As2_neg_total,
                                   CEcracked,
                                   CEdeflect,
                                   costs
@@ -385,7 +395,8 @@ class PostensionedSlabApp:
             "instant losses (N)",
             " (%)",
             "time dependent losses (N)",
-            " (%)", "As1_pos (mm2)",
+            " (%)",
+            "As1_pos (mm2)",
             "As2_pos (mm2)",
             "As1_neg (mm2)",
             "As2_neg (mm2)",
@@ -507,8 +518,8 @@ if __name__ == "__main__":
     # App4 = HiperreinforecedBeamApp(25000, 500)
     # App4.HiperRcal()
 
-    App5 = PostensionedSlabApp(25000, 500)
+    App5 = PostensionedSlabApp(25000, 1000)
     App5.SlabPcal()
 
-    App6 = ReinforcedSlabApp(25000, 500)
-    App6.SlabRcal()
+    # App6 = ReinforcedSlabApp(25000, 500)
+    # App6.SlabRcal()

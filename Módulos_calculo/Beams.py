@@ -1734,14 +1734,14 @@ class posTensionedSlab:
         32: 804.25,
         40: 1256.64
     }
-    length_fraction = 46
+    length_fraction = 40
 
     unitprices = {
         # _____MATERIALS_____
         "wooden_board (m2)": 45.50 / 25,
         "formwork_girders (m2)": 185 / 150,
         "strut (Ud)": 26.47 / 150,
-        "release_agent": 1.8,
+        "release_agent (l)": 1.8,
         "reinfSteel (kg)": 1.6,
         "concrete (m3)": 90.21,
         "preten_steel (kg)": 0,  # included PP of jacks,ducts,anchorages...
@@ -1768,12 +1768,13 @@ class posTensionedSlab:
         else:
             self.h = height
 
-        width = int(self.l / 100) * 50
-        if width < (self.l / 2):
-            self.b = width + 50
-        else:
-            self.b = width
-
+        # width = int(self.l / 100) * 50
+        # if width < (self.l / 2):
+        #     self.b = width + 50
+        # else:
+        #     self.b = width
+        self.b = 500
+        self.n = self.l / 2 / self.b
         self.e = self.h / 2 - (self.reca + 18 / 2)  # every flat duct´s height is 18mm
         self.dp = self.h / 2 + self.e
         self.ds1 = self.h + self.recp
@@ -2168,8 +2169,8 @@ class posTensionedSlab:
 
     #costs
         concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
-        Apcost = weight_Psteel * self.unitprices["preten_steel (kg)"]
-        Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
+        Apcost = weight_Psteel * self.unitprices["preten_steel (kg)"] * self.n
+        Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"] * self.n
         woodenboard = slab_suf * self.unitprices["wooden_board (m2)"]
         struts = (int(slab_suf * 4) + 1) * self.unitprices["strut (Ud)"]
         formworkgirders = slab_suf * self.unitprices["formwork_girders (m2)"]
@@ -2230,7 +2231,7 @@ class reinforcedSlab:
         "wooden_board (m2)": 45.50 / 25,
         "formwork_girders (m2)": 185 / 150,
         "strut (Ud)": 26.47 / 150,
-        "release_agent (l)"
+        "release_agent (l)": 1.8,
         "reinfSteel (kg)": 1.6,
         "concrete (m3)": 90.21,
         "preten_steel": 0,  # included PP of jacks,ducts,anchorages...
@@ -2647,41 +2648,41 @@ if __name__ == "__main__":
     # costs = viga4.cost(As_pos[0]+As_neg[1], As_pos[1]+As_neg[0])
     # print(costs)
 
-    # slab1 = posTensionedSlab(5000)
-    # # print(slab1.properties())
-    # Pmin = slab1.Pmin()
-    #
-    # # if Pmin is negative it will be replaced by de equivalent P necessary to equilibrate half of the self weight
-    # if Pmin < 0:
-    #     Pmin = slab1.Pequiv(slab1.selfweight * slab1.b / 8)
-    #
-    # Pmax = slab1.Pmax()
-    # Ap = slab1.Ap(Pmin)
-    # sectionHomo = slab1.sectionHomo(Ap)
-    # instLosses = slab1.instantLosses(Pmin, Ap)
-    # timedepLosses = slab1.timedepLosses(Pmin, Ap, sectionHomo[0], sectionHomo[1],sectionHomo[2])
-    # ElUpos = slab1.checkELUpos(Ap)
-    # ElUneg = slab1.checkELUneg(Ap)
-    # crakedpos = slab1.CEcrack(Ap, ElUpos[0])
-    # crackedneg = slab1.CEcrack(Ap, ElUneg[0])
-    # Ptotal = Pmin + instLosses + timedepLosses
-    # deflect = slab1.CEdeflect(Ptotal, Ap, ElUpos[0], ElUneg[0], sectionHomo[2])
-    # cost = slab1.cost(Ap, ElUpos[0] + ElUneg[1], ElUpos[1] + ElUneg[0])
+    slab1 = posTensionedSlab(25000)
+    # print(slab1.properties())
+    Pmin = slab1.Pmin()
+
+    # if Pmin is negative it will be replaced by de equivalent P necessary to equilibrate half of the self weight
+    if Pmin < 0:
+        Pmin = slab1.Pequiv(slab1.selfweight * slab1.b / 8)
+
+    Pmax = slab1.Pmax()
+    Ap = slab1.Ap(Pmin)
+    sectionHomo = slab1.sectionHomo(Ap)
+    instLosses = slab1.instantLosses(Pmin, Ap)
+    timedepLosses = slab1.timedepLosses(Pmin, Ap, sectionHomo[0], sectionHomo[1],sectionHomo[2])
+    ElUpos = slab1.checkELUpos(Ap)
+    ElUneg = slab1.checkELUneg(Ap)
+    crakedpos = slab1.CEcrack(Ap, ElUpos[0])
+    crackedneg = slab1.CEcrack(Ap, ElUneg[0])
+    Ptotal = Pmin + instLosses + timedepLosses
+    deflect = slab1.CEdeflect(Ptotal, Ap, ElUpos[0], ElUneg[0], sectionHomo[2])
+    cost = slab1.cost(Ap, ElUpos[0] + ElUneg[1], ElUpos[1] + ElUneg[0])
 
 
-    # print(f"Ap {Ap}")
-    # print(f"Pmin {Pmin}")
-    # print(f"Pmax {Pmax}")
-    # print(f"InstantaLoses {instLosses}")
-    # print(f"Relative instantLosses{instLosses / Pmin * 100}")
-    # print(f"TiemdepLoses {timedepLosses}")
-    # print(f"Relative timedepLosses{timedepLosses / Pmin * 100}")
-    # print(f"As_pos {ElUpos}")
-    # print(f"As_neg {ElUneg}")
-    # print(f"Cracked_pos {crakedpos}")
-    # print(f"Cracked_neg {crackedneg}")
-    # print((f"deflect {deflect}"))
-    # print(cost)
+    print(f"Ap {Ap}")
+    print(f"Pmin {Pmin}")
+    print(f"Pmax {Pmax}")
+    print(f"InstantLosses {instLosses}")
+    print(f"Relative instantLosses {instLosses / Pmin * 100}")
+    print(f"TiemdepLosses {timedepLosses}")
+    print(f"Relative timedepLosses {timedepLosses / Pmin * 100}")
+    print(f"As_pos {ElUpos}")
+    print(f"As_neg {ElUneg}")
+    print(f"Cracked_pos {crakedpos}")
+    print(f"Cracked_neg {crackedneg}")
+    print((f"deflect {deflect}"))
+    print(cost)
     #
     # slab2 = reinforcedSlab(25000)
     # As_pos = slab2.As_pos()
