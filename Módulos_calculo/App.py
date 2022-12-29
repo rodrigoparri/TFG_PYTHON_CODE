@@ -49,12 +49,43 @@ class IsopostBeamApp:
             As2 = passivereinforcement[1]
             CEcracked = self.IsoPBeams[instance].CEcrack(Pmin, Ap, passivereinforcement[0], passivereinforcement[1])
             CEdeflect = self.IsoPBeams[instance].CEdeflect(Pmin, Ap, As1, As2, sectionhomo[2])
+            costs = self.IsoPBeams[instance].cost(Ap, As1, As2)
 
-            beamcalc[instance] = (b, h, e, Pmin, Pmax, Ap, instantlosses, relinstlosses, timedeplosses, reltimedeplosses,
-                                  As1, As2, CEcracked, CEdeflect)
+            beamcalc[instance] = (
+                b,
+                h,
+                e,
+                Pmin,
+                Pmax,
+                Ap,
+                instantlosses,
+                relinstlosses,
+                timedeplosses,
+                reltimedeplosses,
+                As1,
+                As2,
+                CEcracked,
+                CEdeflect,
+                costs
+            )
 
-        columnnames = ("b (mm)","h (mm)", "e (mm)", "Pmin (N)", "Pmax (N)", "Ap (mm2)", "instant losses (N)"," (%)",
-                           "time dependent losses (N)"," (%)", "As1 (mm2)", "As2 (mm2)", "CEcracked", "CEdeflection")
+        columnnames = (
+            "b (mm)",
+            "h (mm)",
+            "e (mm)",
+            "Pmin (N)",
+            "Pmax (N)",
+            "Ap (mm2)",
+            "instant losses (N)",
+            " (%)",
+            "time dependent losses (N)",
+            " (%)",
+            "As1 (mm2)",
+            "As2 (mm2)",
+            "CEcracked",
+            "CEdeflection",
+            "€"
+        )
 
         pdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
@@ -91,11 +122,31 @@ class IsoreinforcedBeamApp:
             secthomo = self.IsoRBeams[instance].sectionHomo(As[0], As[1])
             CEcracked = self.IsoRBeams[instance].CEcrack(As[0], As[1])
             CEdeflect = self.IsoRBeams[instance].CEdeflect(As[0], As[1],secthomo[2])
+            costs = self.IsoRBeams[instance].cost(As[0], As[1])
 
-            beamcalc[instance] = (b, h, Me, Mu, As[0], As[1], CEcracked, CEdeflect)
+            beamcalc[instance] = (
+                b,
+                h,
+                Me,
+                Mu,
+                As[0],
+                As[1],
+                CEcracked,
+                CEdeflect,
+                costs
+            )
 
-        columnnames = ("b (mm)", "h (mm)", "Me (mkN)", "Mu (mkN)", "As1 (mm2)",
-                       "As2 (mm2)", "CEcracked", "CEdeflection")
+        columnnames = (
+            "b (mm)",
+            "h (mm)",
+            "Me (mkN)",
+            "Mu (mkN)",
+            "As1 (mm2)",
+            "As2 (mm2)",
+            "CEcracked",
+            "CEdeflection",
+            "€"
+        )
         rdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
         print(rdf)
@@ -146,6 +197,7 @@ class HiperpostBeamApp:
             CEcracked = self.HiperPBeams[instance].CEcrack(Ap, As1_pos)
             Ptotal = Pmin + instantlosses + timedeplosses
             CEdeflect = self.HiperPBeams[instance].CEdeflect(Ptotal, Ap, As1_pos, As1_neg, sectHomo[2])
+            costs = self.HiperPBeams[instance].cost(Ap, As1_pos + As2_neg , As1_neg + As2_pos)
 
             beamcalc[instance] = (b,
                                   h,
@@ -162,7 +214,8 @@ class HiperpostBeamApp:
                                   As1_neg,
                                   As2_neg,
                                   CEcracked,
-                                  CEdeflect
+                                  CEdeflect,
+                                  costs
                                   )
 
         columnnames = ("b (mm)",
@@ -179,7 +232,8 @@ class HiperpostBeamApp:
                        "As1_neg (mm2)",
                        "As2_neg (mm2)",
                        "CEcracked",
-                       "Cedeflect"
+                       "Cedeflect",
+                       "€"
                        )
 
         pdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
@@ -219,6 +273,7 @@ class HiperreinforecedBeamApp:
             CEcracked_pos = self.HiperRBeams[instance].CEcrack_pos(As_pos[0])
             CEcracked_neg = self.HiperRBeams[instance].CEcrack_neg(As_neg[0])
             CEdeflect = self.HiperRBeams[instance].CEdeflect(As_pos[0], As_pos[1],secthomo[2])
+            costs = self.HiperRBeams[instance].cost(As_pos[0]+As_neg[1], As_pos[1]+As_neg[0])
 
             beamcalc[instance] = (
                 b,
@@ -231,7 +286,8 @@ class HiperreinforecedBeamApp:
                 As_neg[1],
                 CEcracked_pos,
                 CEcracked_neg,
-                CEdeflect
+                CEdeflect,
+                costs
             )
 
         columnnames = (
@@ -245,7 +301,8 @@ class HiperreinforecedBeamApp:
             "As2_neg (mm2)",
             "CEcracked_pos",
             "CEcracked_neg",
-            "CEdeflection"
+            "CEdeflection",
+            "€"
         )
         rdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
@@ -297,6 +354,7 @@ class PostensionedSlabApp:
             CEcracked = self.PSlabs[instance].CEcrack(Ap, As1_pos)
             Ptotal = Pmin + instLosses + timedepLosses
             CEdeflect = self.PSlabs[instance].CEdeflect(Ptotal, Ap, As1_pos, As1_neg, Sh[2])
+            costs = self.PSlabs[instance].cost(Ap, As1_pos + As2_neg, As2_pos + As1_neg)
 
             slabcalc[instance] = (b,
                                   h,
@@ -313,7 +371,8 @@ class PostensionedSlabApp:
                                   As1_neg,
                                   As2_neg,
                                   CEcracked,
-                                  CEdeflect
+                                  CEdeflect,
+                                  costs
                                   )
 
         columnnames = (
@@ -331,27 +390,125 @@ class PostensionedSlabApp:
             "As1_neg (mm2)",
             "As2_neg (mm2)",
             "CEcracked",
-            "Cedeflect"
+            "Cedeflect",
+            "€"
            )
 
         pdf = pd.DataFrame.from_dict(slabcalc, orient="index", columns=columnnames)
         pd.set_option("display.max_columns", len(columnnames))
         print(pdf)
 
+class ReinforcedSlabApp:
+
+    def __init__(self, limit, step):
+
+        self.ReinfSlabs = {}
+
+        for length in self.lengen(limit, step):
+
+            self.ReinfSlabs[str(Beams.reinforcedSlab(length))] = Beams.reinforcedSlab(length)
+
+    @staticmethod
+    def lengen(limit, step):  # method that generates the next length as it´s called
+
+        n = 5000
+        while n <= limit:
+            yield n
+            n += step
+
+    def SlabRcal(self):
+        beamcalc = {}
+
+        for instance in self.ReinfSlabs:
+
+            b = self.ReinfSlabs[instance].b
+            h = self.ReinfSlabs[instance].h
+            # Me = self.HiperRBeams[instance].Me * 1e-6
+            # Mu = self.HiperRBeams[instance].Mu * 1e-6
+            As_pos = self.ReinfSlabs[instance].As_pos()
+            As_neg = self.ReinfSlabs[instance].As_neg()
+            secthomo = self.ReinfSlabs[instance].sectionHomo(As_pos[0], As_pos[1])
+            As_min = self.ReinfSlabs[instance].As_min(secthomo[1])
+
+            pos = False
+            neg = False
+            if As_pos[0] < As_min:
+                CEcracked_pos = self.ReinfSlabs[instance].CEcrack_pos(As_min)
+                # As_pos = As_min
+                pos = True
+            else:
+                CEcracked_pos = self.ReinfSlabs[instance].CEcrack_pos(As_pos[0])
+
+            if As_neg[0] < As_min:
+                CEcracked_neg = self.ReinfSlabs[instance].CEcrack_neg(As_min)
+                # As_neg = As_min
+                neg = True
+            else:
+                CEcracked_neg = self.ReinfSlabs[instance].CEcrack_neg(As_neg[0])
+
+            costs = self.ReinfSlabs[instance].cost(As_pos[0]+As_neg[1], As_pos[1]+As_neg[0])
+            # if pos == True and neg == True:
+            #     CEdeflect = self.ReinfSlabs[instance].CEdeflect(As_min, As_min, secthomo[2])
+            # elif pos == True and neg == False:
+            #     CEdeflect = self.ReinfSlabs[instance].CEdeflect(As_min, As_neg[0], secthomo[2])
+            # elif pos == False and neg == True:
+            #     CEdeflect = self.ReinfSlabs[instance].CEdeflect(As_pos[0], As_min, secthomo[2])
+            # else:
+            #     CEdeflect = self.ReinfSlabs[instance].CEdeflect(As_pos[0], As_neg[0], secthomo[2])
+
+            CEdeflect = self.ReinfSlabs[instance].CEdeflect(As_pos[0], As_neg[0], secthomo[2])
+
+            beamcalc[instance] = (
+                b,
+                h,
+                # Me,
+                # Mu,
+                As_pos[0],
+                As_pos[1],
+                As_neg[0],
+                As_neg[1],
+                CEcracked_pos,
+                CEcracked_neg,
+                CEdeflect,
+                costs
+            )
+
+        columnnames = (
+            "b (mm)",
+            "h (mm)",
+            # "Me (mkN)",
+            # "Mu (mkN)",
+            "As1_pos (mm2)",
+            "As2_pos (mm2)",
+            "As1_neg (mm2)",
+            "As2_neg (mm2)",
+            "CEcracked_pos",
+            "CEcracked_neg",
+            "CEdeflection",
+            "€"
+        )
+
+        rdf = pd.DataFrame.from_dict(beamcalc, orient="index", columns=columnnames)
+        pd.set_option("display.max_columns", len(columnnames))
+        print(rdf)
+
 
 if __name__ == "__main__":
 
-    # App = IsopostBeamApp(25000, 1000)
+    # App = IsopostBeamApp(25000, 500)
     # App.IsoPcal()
-    #
-    # App2 = IsoreinforcedBeamApp(25000, 1000)
-    # App2.IsoRcal()
+
+    App2 = IsoreinforcedBeamApp(25000, 500)
+    App2.IsoRcal()
 
     # App3 = HiperpostBeamApp(25000, 1000)
     # App3.HiperPcal()
 
-    # App3 = HiperreinforecedBeamApp(25000, 1000)
-    # App3.HiperRcal()
+    # App4 = HiperreinforecedBeamApp(25000, 1000)
+    # App4.HiperRcal()
 
-    App4 = PostensionedSlabApp(25000, 1000)
-    App4.SlabPcal()
+    # App5 = PostensionedSlabApp(25000, 1000)
+    # App5.SlabPcal()
+
+    # App6 = ReinforcedSlabApp(25000, 1000)
+    # App6.SlabRcal()

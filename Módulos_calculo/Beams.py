@@ -60,6 +60,7 @@ class posTensionedIsoBeam:
         32: 804.25,
         40: 1256.64
     }
+    length_fraction = 30
 
     unitprices = {
         # _____MATERIALS_____
@@ -68,7 +69,7 @@ class posTensionedIsoBeam:
         "strut (Ud)": 26.47,
         "reinfSteel (kg)": 1.6,
         "concrete (m3)": 90.21,
-        "preten_steel": 0,  # included PP of jacks,ducts,anchorages...
+        "preten_steel (kg)": 0,  # included PP of jacks,ducts,anchorages...
         # _____EQUIPMENT_____
         "elevator_trolley": 26.75,
         "pump_truck": 190.40,
@@ -86,8 +87,8 @@ class posTensionedIsoBeam:
     def __init__(self, l):
 
         self.l = l
-        height = int(l / 1250) * 50
-        if height < l / 25:
+        height = int(l / (50 * self.length_fraction)) * 50
+        if height < l / self.length_fraction:
             self.h = height + 50
         else:
             self.h = height
@@ -167,7 +168,7 @@ class posTensionedIsoBeam:
         Imin = self.Iflex()
         homosection = self.sectionHomo(Ap)
         instantLosses = self.instantLosses(Pmin, Ap)
-        timedepLosses = self.timedepLosses(Pmin, Ap,homosection[0], homosection[1], homosection[2])
+        timedepLosses = self.timedepLosses(Pmin, Ap, homosection[0], homosection[1], homosection[2])
 
         return {"Ab mm2": self.Ab,
                 "h mm": self.h,
@@ -440,6 +441,38 @@ class posTensionedIsoBeam:
                 return "OK"
             else:
                 return "NOT OK"
+
+    def cost(self, Ap, As1, As2):
+
+        beam_surf = self.l * (self.b + self.h * 2) * 1e-6
+        vol_concrete = self.Ab * self.l * 1e-9
+    # steel kg
+        s = 2 * math.atan(4 * self.e / self.l) * self.l ** 2 / (8 * self.e)
+        weight_Psteel = Ap * s * 7850 * 1e-9
+        weight_Rsteel_pos = As1 * self.l * 7850 * 1e-9  # kg
+        weight_Rsteel_neg = As2 * self.l * 7850 * 1e-9  # kg
+
+    #costs
+        concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
+        Apcost = weight_Psteel * self.unitprices["preten_steel (kg)"]
+        Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
+        woodenboard = beam_surf * self.unitprices["wooden_board (m2)"]
+        struts = (int(self.l * 1e-3) + 1) * self.unitprices["strut (Ud)"]
+
+        costs = (
+            concreteCost,
+            Apcost,
+            Ascost,
+            woodenboard,
+            struts,
+            self.unitprices["elevator_trolley"],
+            self.unitprices["pump_truck"],
+            self.unitprices["shuttering_officer"] * 4,
+            self.unitprices["shutterin_helper"] * 4
+        )
+        total = sum(costs)
+
+        return total
 
 class reinforcedIsoBeam:
     fck = 35
@@ -741,6 +774,35 @@ class reinforcedIsoBeam:
             else:
                 return "NOT OK"
 
+    def cost(self, As1, As2):
+
+        beam_surf = self.l * (self.b + self.h * 2) * 1e-6
+        vol_concrete = self.Ab * self.l * 1e-9
+    # steel kg
+
+        weight_Rsteel_pos = As1 * self.l * 7850 * 1e-9  # kg
+        weight_Rsteel_neg = As2 * self.l * 7850 * 1e-9  # kg
+
+    #costs
+        concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
+        Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
+        woodenboard = beam_surf * self.unitprices["wooden_board (m2)"]
+        struts = (int(self.l * 1e-3) + 1) * self.unitprices["strut (Ud)"]
+
+        costs = (
+            concreteCost,
+            Ascost,
+            woodenboard,
+            struts,
+            self.unitprices["elevator_trolley"],
+            self.unitprices["pump_truck"],
+            self.unitprices["shuttering_officer"] * 4,
+            self.unitprices["shutterin_helper"] * 4
+        )
+        total = sum(costs)
+
+        return total
+
 class posTensionedHiperBeam:
     fck = 35
     fckt = 24.7
@@ -800,7 +862,7 @@ class posTensionedHiperBeam:
         32: 804.25,
         40: 1256.64
     }
-    length_fraction = 32
+    length_fraction = 29
 
     unitprices = {
         # _____MATERIALS_____
@@ -809,7 +871,7 @@ class posTensionedHiperBeam:
         "strut (Ud)": 26.47,
         "reinfSteel (kg)": 1.6,
         "concrete (m3)": 90.21,
-        "preten_steel": 0,  # included PP of jacks,ducts,anchorages...
+        "preten_steel (kg)": 0,  # included PP of jacks,ducts,anchorages...
         # _____EQUIPMENT_____
         "elevator_trolley": 26.75,
         "pump_truck": 190.40,
@@ -1192,6 +1254,43 @@ class posTensionedHiperBeam:
                 return "OK"
             else:
                 return "NOT OK"
+    def cost(self, Ap, As1, As2):
+
+        beam_surf = self.l * (self.b + self.h * 2) * 1e-6
+        vol_concrete = self.Ab * self.l * 1e-9
+    # steel kg
+        l_ext = 4 * self.l / 5
+        l_mid = 3 * self.l / 5
+        l_sup = 2 * self.l / 5
+        s_ext = math.atan(4 * self.e / l_ext) * l_ext ** 2 / (8 * self.e)
+        s_int = math.atan(4 * self.e / l_mid) * l_mid ** 2 / (8 * self.e)
+        s_sup = math.atan(4 * self.e / l_sup) * l_sup ** 2 / (8 * self.e)
+        weight_Psteel = Ap * (s_ext * 2 + s_int + s_sup * 2) * 7850 * 1e-9
+        weight_Rsteel_pos = As1 * (self.l * 3) * 1.1 * 7850 * 1e-9  # kg
+        weight_Rsteel_neg = As2 * 1.8 * self.l * 6 * 7850 * 1e-9  # kg
+
+    #costs
+        concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
+        Apcost = weight_Psteel * self.unitprices["preten_steel (kg)"]
+        Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
+        woodenboard = beam_surf * self.unitprices["wooden_board (m2)"]
+        struts = (int(self.l * 1e-3 / 1.5) + 1) * self.unitprices["strut (Ud)"]
+
+        costs = (
+            concreteCost,
+            Apcost,
+            Ascost,
+            woodenboard,
+            struts,
+            self.unitprices["elevator_trolley"],
+            self.unitprices["pump_truck"],
+            self.unitprices["shuttering_officer"] * 4,
+            self.unitprices["shutterin_helper"] * 4
+        )
+        total = sum(costs)
+
+        return total
+
 class reinforcedHiperBeam:
 
     fck = 35
@@ -1545,6 +1644,35 @@ class reinforcedHiperBeam:
             else:
                 return "NOT OK"
 
+    def cost(self, As1, As2):
+
+        beam_surf = 3 * self.l * (self.b + self.h * 2) * 1e-6
+        vol_concrete = 3 * self.Ab * self.l * 1e-9
+    # steel kg
+
+        weight_Rsteel_pos = As1 * (self.l * 3) * 1.1 * 7850 * 1e-9  # kg
+        weight_Rsteel_neg = As2 * 1.8 * self.l * 7850 * 1e-9  # kg
+
+    #costs
+        concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
+        Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
+        woodenboard = beam_surf * self.unitprices["wooden_board (m2)"]
+        struts = (int(self.l * 1e-3) + 1) * self.unitprices["strut (Ud)"]
+
+        costs = (
+            concreteCost,
+            Ascost,
+            woodenboard,
+            struts,
+            self.unitprices["elevator_trolley"],
+            self.unitprices["pump_truck"],
+            self.unitprices["shuttering_officer"] * 4,
+            self.unitprices["shutterin_helper"] * 4
+        )
+        total = sum(costs)
+
+        return total
+
 class posTensionedSlab:
 
     fck = 35
@@ -1594,7 +1722,7 @@ class posTensionedSlab:
         32: 804.25,
         40: 1256.64
     }
-    length_fraction = 39
+    length_fraction = 46
 
     unitprices = {
         # _____MATERIALS_____
@@ -1688,11 +1816,11 @@ class posTensionedSlab:
         self.eps_cs = eps_cd + eps_ca  # total shrinkage strain
 
         if self.l < 7:
-            self.unitprices["preten_steel"] = 5.40
+            self.unitprices["preten_steel (kg)"] = 5.40
         elif self.l >= 7 and l <=10:
-            self.unitprices["preten_steel"] = 7.02
+            self.unitprices["preten_steel (kg)"] = 7.02
         elif self.l > 10:
-            self.unitprices["preten_steel"] = 8.64
+            self.unitprices["preten_steel (kg)"] = 8.64
     def __str__(self) -> str:
         text = f"PSlab{self.l / 1000}"
         return text
@@ -2012,7 +2140,8 @@ class posTensionedSlab:
                 return "NOT OK"
 
     def cost(self, Ap, As1, As2):
-        vol_concrete = pow(self.l * 3, 2) * self.h
+        slab_suf = (3 * self.l) ** 2 * 1e-6
+        vol_concrete = slab_suf * self.h * 1e-3
     # steel kg
         l_ext = 4 * self.l / 5
         l_mid = 3 * self.l / 5
@@ -2020,16 +2149,33 @@ class posTensionedSlab:
         s_ext = math.atan(4 * self.e / l_ext) * l_ext ** 2 / (8 * self.e)
         s_int = math.atan(4 * self.e / l_mid) * l_mid ** 2 / (8 * self.e)
         s_sup = math.atan(4 * self.e / l_sup) * l_sup ** 2 / (8 * self.e)
-        weight_Psteel = Ap * (s_ext * 2 + s_int + s_sup * 2) * 6 * 7850
-        weight_Rsteel_pos = As1 * (self.l * 3) * 1.1 * 6 * 7850
-        weight_Rsteel_neg = As2 * 1.8 * self.l * 6 * 7850
-    # form work
-        slab_suf = pow(3 * self.l, 2)
-        n_strut = int(slab_suf) + 1
+        weight_Psteel = Ap * (s_ext * 2 + s_int + s_sup * 2) * 6 * 7850 * 1e-9
+        weight_Rsteel_pos = As1 * (self.l * 3) * 1.1 * 6 * 7850 * 1e-9  # kg
+        weight_Rsteel_neg = As2 * 1.8 * self.l * 6 * 7850 * 1e-9  # kg
 
+    #costs
         concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
+        Apcost = weight_Psteel * self.unitprices["preten_steel (kg)"]
+        Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
+        woodenboard = slab_suf * self.unitprices["wooden_board (m2)"]
+        struts = (int(slab_suf / 1.5) + 1) * self.unitprices["strut (Ud)"]
+        formworkgirders = slab_suf * self.unitprices["formwork_girders (m2)"]
 
-        return concreteCost
+        costs = (
+            concreteCost,
+            Apcost,
+            Ascost,
+            woodenboard,
+            struts,
+            formworkgirders,
+            self.unitprices["elevator_trolley"],
+            self.unitprices["pump_truck"],
+            self.unitprices["shuttering_officer"] * 4,
+            self.unitprices["shutterin_helper"] * 4
+        )
+        total = sum(costs)
+
+        return total
 
 class reinforcedSlab:
 
@@ -2062,7 +2208,7 @@ class reinforcedSlab:
         32: 804.25,
         40: 1256.64
     }
-    length_fraction = 18
+    length_fraction = 37
 
     unitprices = {
         # _____MATERIALS_____
@@ -2173,8 +2319,8 @@ class reinforcedSlab:
     def properties(self):
         As_pos = self.As_pos()
         As_neg = self.As_neg()
-        As_min = self.As_min()
         sH = self.sectionHomo(As_pos[0], As_neg[0])
+        As_min = self.As_min(sH[1])
         cracked_pos = self.CEcrack_pos(As_pos[0])
         cracked_neg = self.CEcrack_neg(As_neg[0])
         deflect = self.CEdeflect(As_pos[0], As_neg[0], sH[2])
@@ -2249,7 +2395,7 @@ class reinforcedSlab:
             k = 1 - 0.35 * (self.h - 300) / 500
         elif self.h >= 800:
             k = 0.65
-        As_min = 0.4 * k * self.fctm * (self.h - y) * self.b
+        As_min = 0.4 * k * self.fctm * (self.h - y) * self.b / self.fyk
 
         return As_min
 
@@ -2417,8 +2563,38 @@ class reinforcedSlab:
             else:
                 return "NOT OK"
 
+    def cost(self, As1, As2):
+        slab_suf = (3 * self.l) ** 2 * 1e-6
+        vol_concrete = slab_suf * self.h * 1e-3
+    # steel kg
+
+        weight_Rsteel_pos = As1 * (self.l * 3) * 1.1 * 6 * 7850 * 1e-9  # kg
+        weight_Rsteel_neg = As2 * 1.8 * self.l * 6 * 7850 * 1e-9  # kg
+
+    #costs
+        concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
+        Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
+        woodenboard = slab_suf * self.unitprices["wooden_board (m2)"]
+        struts = (int(slab_suf / 1) + 1) * self.unitprices["strut (Ud)"]
+        formworkgirders = slab_suf * self.unitprices["formwork_girders (m2)"]
+
+        costs = (
+            concreteCost,
+            Ascost,
+            woodenboard,
+            struts,
+            formworkgirders,
+            self.unitprices["elevator_trolley"],
+            self.unitprices["pump_truck"],
+            self.unitprices["shuttering_officer"] * 4,
+            self.unitprices["shutterin_helper"] * 4
+        )
+        total = sum(costs)
+
+        return total
 
 if __name__ == "__main__":
+    pass
     # viga = posTensionedIsoBeam(25000)
     # Pmin = viga.Pmin()
     # Ap = viga.Ap(Pmin)
@@ -2447,14 +2623,19 @@ if __name__ == "__main__":
     # crackedpos = viga3.CEcrack(Ap, ElUpos[0])
     # crackedneg = viga3.CEcrack(Ap, ElUneg[0])
 
+    # viga4 = reinforcedHiperBeam(5000)
+    # As_pos = viga4.As_pos()
+    # As_neg = viga4.As_neg()
+    # costs = viga4.cost(As_pos[0]+As_neg[1], As_pos[1]+As_neg[0])
+    # print(costs)
 
-    # slab1 = posTensionedSlab(6000)
-    # print(slab1.properties())
+    # slab1 = posTensionedSlab(5000)
+    # # print(slab1.properties())
     # Pmin = slab1.Pmin()
-
-    # if Pmin is negative it will be replaced by de equivalent P necessary to equilibrate half of the self weight
+    #
+    # # if Pmin is negative it will be replaced by de equivalent P necessary to equilibrate half of the self weight
     # if Pmin < 0:
-    #     Pmin = slab1.Pequiv(slab1.selfweight * slab1.b / 2)
+    #     Pmin = slab1.Pequiv(slab1.selfweight * slab1.b / 8)
     #
     # Pmax = slab1.Pmax()
     # Ap = slab1.Ap(Pmin)
@@ -2467,7 +2648,7 @@ if __name__ == "__main__":
     # crackedneg = slab1.CEcrack(Ap, ElUneg[0])
     # Ptotal = Pmin + instLosses + timedepLosses
     # deflect = slab1.CEdeflect(Ptotal, Ap, ElUpos[0], ElUneg[0], sectionHomo[2])
-    # cost = slab1.cost(Apm, ElUpos[0] + ElUneg[1], ElUpos[1] + ElUneg[0])
+    # cost = slab1.cost(Ap, ElUpos[0] + ElUneg[1], ElUpos[1] + ElUneg[0])
 
 
     # print(f"Ap {Ap}")
@@ -2483,17 +2664,29 @@ if __name__ == "__main__":
     # print(f"Cracked_neg {crackedneg}")
     # print((f"deflect {deflect}"))
     # print(cost)
-
-    slab2 = reinforcedSlab(5000)
-    As_pos = slab2.As_pos()
-    As_neg = slab2.As_neg()
-    sH = slab2.sectionHomo(As_pos[0] + As_neg[1], As_pos[1] + As_neg[0])
-    crack_pos = slab2.CEcrack_pos(As_pos[0])
-    crack_neg = slab2.CEcrack_neg(As_neg[0])
-    deflection = slab2.CEdeflect(As_pos[0], As_neg[0], sH[2])
-
-    print(As_pos)
-    print(As_neg)
-    print(crack_pos)
-    print(crack_neg)
-    print(deflection)
+    #
+    # slab2 = reinforcedSlab(25000)
+    # As_pos = slab2.As_pos()
+    # As_neg = slab2.As_neg()
+    # sH = slab2.sectionHomo(As_pos[0] + As_neg[1], As_pos[1] + As_neg[0])
+    # As_min = slab2.As_min(sH[1])
+    #
+    # if As_min > As_pos[0]:
+    #     crack_pos = slab2.CEcrack_pos(As_min)
+    # else:
+    #     crack_pos = slab2.CEcrack_pos(As_pos[0])
+    #
+    # if As_min > As_neg[0]:
+    #     crack_neg = slab2.CEcrack_neg(As_min)
+    # else:
+    #     crack_neg = slab2.CEcrack_neg(As_neg[0])
+    #
+    # deflection = slab2.CEdeflect(As_pos[0], As_neg[0], sH[2])
+    #
+    #
+    # print(As_pos)
+    # print(As_neg)
+    # print(As_min)
+    # print(crack_pos)
+    # print(crack_neg)
+    # print(deflection)
