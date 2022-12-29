@@ -498,17 +498,17 @@ if __name__ == "__main__":
     # App = IsopostBeamApp(25000, 500)
     # App.IsoPcal()
 
-    App2 = IsoreinforcedBeamApp(25000, 500)
-    App2.IsoRcal()
+    # App2 = IsoreinforcedBeamApp(25000, 500)
+    # App2.IsoRcal()
 
-    # App3 = HiperpostBeamApp(25000, 1000)
+    # App3 = HiperpostBeamApp(25000, 500)
     # App3.HiperPcal()
 
-    # App4 = HiperreinforecedBeamApp(25000, 1000)
+    # App4 = HiperreinforecedBeamApp(25000, 500)
     # App4.HiperRcal()
 
-    # App5 = PostensionedSlabApp(25000, 1000)
-    # App5.SlabPcal()
+    App5 = PostensionedSlabApp(25000, 500)
+    App5.SlabPcal()
 
-    # App6 = ReinforcedSlabApp(25000, 1000)
-    # App6.SlabRcal()
+    App6 = ReinforcedSlabApp(25000, 500)
+    App6.SlabRcal()

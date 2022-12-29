@@ -64,9 +64,10 @@ class posTensionedIsoBeam:
 
     unitprices = {
         # _____MATERIALS_____
-        "wooden_board (m2)": 45.50,
-        "formwork_girders (m2)": 185,
-        "strut (Ud)": 26.47,
+        "wooden_board (m2)": 45.5 / 25,
+        "formwork_girders (m2)": 102 / 150,
+        "release_agent (l)": 1.8,  # 0.013 l/m2
+        "strut (Ud)": 19.25 / 150,
         "reinfSteel (kg)": 1.6,
         "concrete (m3)": 90.21,
         "preten_steel (kg)": 0,  # included PP of jacks,ducts,anchorages...
@@ -151,11 +152,11 @@ class posTensionedIsoBeam:
         self.eps_cs = eps_cd + eps_ca  # total shrinkage strain
 
         if self.l < 7:
-            self.unitprices["preten_steel"] = 5.40
+            self.unitprices["preten_steel (kg)"] = 5.40
         elif self.l >= 7 and l <=10:
-            self.unitprices["preten_steel"] = 7.02
+            self.unitprices["preten_steel (kg)"] = 7.02
         elif self.l > 10:
-            self.unitprices["preten_steel"] = 8.64
+            self.unitprices["preten_steel (kg)"] = 8.64
 
     def __str__(self) -> str:
         text = f"IsoPB{self.l / 1000}"
@@ -457,7 +458,8 @@ class posTensionedIsoBeam:
         Apcost = weight_Psteel * self.unitprices["preten_steel (kg)"]
         Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
         woodenboard = beam_surf * self.unitprices["wooden_board (m2)"]
-        struts = (int(self.l * 1e-3) + 1) * self.unitprices["strut (Ud)"]
+        struts = (int(self.l * self.b * 1e-6 * 4) + 1) * self.unitprices["strut (Ud)"]
+        release_agent = beam_surf * self.unitprices["release_agent (l)"] * 0.013
 
         costs = (
             concreteCost,
@@ -465,6 +467,7 @@ class posTensionedIsoBeam:
             Ascost,
             woodenboard,
             struts,
+            release_agent,
             self.unitprices["elevator_trolley"],
             self.unitprices["pump_truck"],
             self.unitprices["shuttering_officer"] * 4,
@@ -508,12 +511,13 @@ class reinforcedIsoBeam:
 
     unitprices = {
         # _____MATERIALS_____
-        "wooden_board (m2)": 45.50,
-        "formwork_girders (m2)": 185,
-        "strut (Ud)": 26.47,
+        "wooden_board (m2)": 45.5 / 25,
+        "formwork_girders (m2)": 102 / 150,
+        "release_agent (l)": 1.8,  # 0.013 l/m2
+        "strut (Ud)": 19.25 / 150,
         "reinfSteel (kg)": 1.6,
         "concrete (m3)": 90.21,
-        "preten_steel": 0,  # included PP of jacks,ducts,anchorages...
+        "preten_steel (kg)": 0,  # included PP of jacks,ducts,anchorages...
         # _____EQUIPMENT_____
         "elevator_trolley": 26.75,
         "pump_truck": 190.40,
@@ -787,13 +791,15 @@ class reinforcedIsoBeam:
         concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
         Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
         woodenboard = beam_surf * self.unitprices["wooden_board (m2)"]
-        struts = (int(self.l * 1e-3) + 1) * self.unitprices["strut (Ud)"]
+        struts = (int(self.l * self.b * 4 * 1e-6) + 1) * self.unitprices["strut (Ud)"]
+        release_agent = beam_surf * self.unitprices["release_agent (l)"] * 0.013
 
         costs = (
             concreteCost,
             Ascost,
             woodenboard,
             struts,
+            release_agent,
             self.unitprices["elevator_trolley"],
             self.unitprices["pump_truck"],
             self.unitprices["shuttering_officer"] * 4,
@@ -866,9 +872,10 @@ class posTensionedHiperBeam:
 
     unitprices = {
         # _____MATERIALS_____
-        "wooden_board (m2)": 45.50,
-        "formwork_girders (m2)": 185,
-        "strut (Ud)": 26.47,
+        "wooden_board (m2)": 45.50 / 25,
+        "formwork_girders (m2)": 102 / 150,
+        "strut (Ud)": 26.47 / 150,
+        "release_agent (l)": 1.8,
         "reinfSteel (kg)": 1.6,
         "concrete (m3)": 90.21,
         "preten_steel (kg)": 0,  # included PP of jacks,ducts,anchorages...
@@ -1274,7 +1281,8 @@ class posTensionedHiperBeam:
         Apcost = weight_Psteel * self.unitprices["preten_steel (kg)"]
         Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
         woodenboard = beam_surf * self.unitprices["wooden_board (m2)"]
-        struts = (int(self.l * 1e-3 / 1.5) + 1) * self.unitprices["strut (Ud)"]
+        struts = (int(self.l * self.b * 4 * 1e-6) + 1) * self.unitprices["strut (Ud)"]
+        release_agent = beam_surf * self.unitprices["release_agent (l)"] * 0.013
 
         costs = (
             concreteCost,
@@ -1282,6 +1290,7 @@ class posTensionedHiperBeam:
             Ascost,
             woodenboard,
             struts,
+            release_agent,
             self.unitprices["elevator_trolley"],
             self.unitprices["pump_truck"],
             self.unitprices["shuttering_officer"] * 4,
@@ -1326,9 +1335,10 @@ class reinforcedHiperBeam:
 
     unitprices = {
         # _____MATERIALS_____
-        "wooden_board (m2)": 45.50,
-        "formwork_girders (m2)": 185,
-        "strut (Ud)": 26.47,
+        "wooden_board (m2)": 45.50 / 25,
+        "formwork_girders (m2)": 185 / 150,
+        "strut (Ud)": 26.47 / 150,
+        "release_agent": 1.8,
         "reinfSteel (kg)": 1.6,
         "concrete (m3)": 90.21,
         "preten_steel": 0,  # included PP of jacks,ducts,anchorages...
@@ -1657,13 +1667,15 @@ class reinforcedHiperBeam:
         concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
         Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
         woodenboard = beam_surf * self.unitprices["wooden_board (m2)"]
-        struts = (int(self.l * 1e-3) + 1) * self.unitprices["strut (Ud)"]
+        struts = (int(self.l * self.b * 4 * 1e-6) + 1) * self.unitprices["strut (Ud)"]
+        release_agent = self.unitprices["release_agent (l)"] * 0.013
 
         costs = (
             concreteCost,
             Ascost,
             woodenboard,
             struts,
+            release_agent,
             self.unitprices["elevator_trolley"],
             self.unitprices["pump_truck"],
             self.unitprices["shuttering_officer"] * 4,
@@ -1726,9 +1738,10 @@ class posTensionedSlab:
 
     unitprices = {
         # _____MATERIALS_____
-        "wooden_board (m2)": 45.50,
-        "formwork_girders (m2)": 185,
-        "strut (Ud)": 26.47,
+        "wooden_board (m2)": 45.50 / 25,
+        "formwork_girders (m2)": 185 / 150,
+        "strut (Ud)": 26.47 / 150,
+        "release_agent": 1.8,
         "reinfSteel (kg)": 1.6,
         "concrete (m3)": 90.21,
         "preten_steel (kg)": 0,  # included PP of jacks,ducts,anchorages...
@@ -2158,8 +2171,9 @@ class posTensionedSlab:
         Apcost = weight_Psteel * self.unitprices["preten_steel (kg)"]
         Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
         woodenboard = slab_suf * self.unitprices["wooden_board (m2)"]
-        struts = (int(slab_suf / 1.5) + 1) * self.unitprices["strut (Ud)"]
+        struts = (int(slab_suf * 4) + 1) * self.unitprices["strut (Ud)"]
         formworkgirders = slab_suf * self.unitprices["formwork_girders (m2)"]
+        release_agent = slab_suf * self.unitprices["release_agent (l)"] * 0.013
 
         costs = (
             concreteCost,
@@ -2168,6 +2182,7 @@ class posTensionedSlab:
             woodenboard,
             struts,
             formworkgirders,
+            release_agent,
             self.unitprices["elevator_trolley"],
             self.unitprices["pump_truck"],
             self.unitprices["shuttering_officer"] * 4,
@@ -2212,9 +2227,10 @@ class reinforcedSlab:
 
     unitprices = {
         # _____MATERIALS_____
-        "wooden_board (m2)": 45.50,
-        "formwork_girders (m2)": 185,
-        "strut (Ud)": 26.47,
+        "wooden_board (m2)": 45.50 / 25,
+        "formwork_girders (m2)": 185 / 150,
+        "strut (Ud)": 26.47 / 150,
+        "release_agent (l)"
         "reinfSteel (kg)": 1.6,
         "concrete (m3)": 90.21,
         "preten_steel": 0,  # included PP of jacks,ducts,anchorages...
@@ -2565,24 +2581,26 @@ class reinforcedSlab:
 
     def cost(self, As1, As2):
         slab_suf = (3 * self.l) ** 2 * 1e-6
-        vol_concrete = slab_suf * self.h * 1e-3
+        vol_concrete = slab_suf * self.h * 1e-3  #m3
     # steel kg
 
         weight_Rsteel_pos = As1 * (self.l * 3) * 1.1 * 6 * 7850 * 1e-9  # kg
-        weight_Rsteel_neg = As2 * 1.8 * self.l * 6 * 7850 * 1e-9  # kg
+        weight_Rsteel_neg = As2 * 1.8 * self.l * 6 * 7850 * 1e-9  # kg REVISAR EL 1.8
 
     #costs
         concreteCost = vol_concrete * self.unitprices["concrete (m3)"]
         Ascost = (weight_Rsteel_pos + weight_Rsteel_neg) * self.unitprices["reinfSteel (kg)"]
         woodenboard = slab_suf * self.unitprices["wooden_board (m2)"]
-        struts = (int(slab_suf / 1) + 1) * self.unitprices["strut (Ud)"]
+        struts = (int(slab_suf * 4) + 1) * self.unitprices["strut (Ud)"]
         formworkgirders = slab_suf * self.unitprices["formwork_girders (m2)"]
+        release_agent = slab_suf * self.unitprices["release_agent (l)"] * 0.013
 
         costs = (
             concreteCost,
             Ascost,
             woodenboard,
             struts,
+            release_agent,
             formworkgirders,
             self.unitprices["elevator_trolley"],
             self.unitprices["pump_truck"],
