@@ -2,7 +2,8 @@
 
 ## Comparison between reinforced and post-tensioned elements under transverse loads. Isostatic and continuous elements.
 
-![](Results/absolute_difference.png)   ![](Results/absolute_price.png) 
+![](Results/absolute_price.png) 
+![](Results/absolute_difference.png) 
 
 This project aims to create a straight forward tool to check if and when post-tensioned concrete elements should be
 chosen instead of tradicional reinforced ones. Two files compose the project:
